@@ -1,0 +1,1883 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <!-- Viewport settings optimized for Android WebView & Tablet -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    
+    <!-- Android Theme Color (Matches Indigo-600) -->
+    <meta name="theme-color" content="#4f46e5">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="E-Tamu">
+
+    <title>E-Tamu: Buku Tamu Digital</title>
+    
+    <!-- LIBRARIES & CDN -->
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Word Export Libraries -->
+    <script src="https://unpkg.com/docx@7.1.0/build/index.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    <!-- Icons & Fonts -->
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+    <!-- ================================================================= -->
+    <!-- BAGIAN CSS -->
+    <!-- ================================================================= -->
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f1f5f9; -webkit-tap-highlight-color: transparent; }
+        .chart-container { position: relative; width: 100%; height: 200px; }
+        @media (min-width: 768px) { .chart-container { height: 300px; } }
+        
+        /* Custom Scrollbar */
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        
+        /* Animations */
+        .fade-in { animation: fadeIn 0.3s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .btn-press:active { transform: scale(0.96); }
+        
+        /* Signature Pad */
+        #signature-pad { 
+            touch-action: none; 
+            cursor: crosshair; 
+            width: 100%; 
+            background: #ffffff;
+            display: block;
+        }
+
+        /* Loading & Overlays */
+        .loading-overlay { 
+            position: fixed; 
+            inset: 0; 
+            background: rgba(255,255,255,0.95); 
+            z-index: 100; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+        }
+        
+        .guest-checkbox {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+            accent-color: #4f46e5;
+        }
+
+        /* Responsive Shell - Optimized for Mobile & Tablet */
+        .app-shell {
+            width: 100%;
+            max-width: 100%;
+            margin: 0 auto;
+            background: white;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+        }
+        
+        /* Tablet Portrait & Large Phones */
+        @media (min-width: 640px) {
+            .app-shell {
+                max-width: 600px;
+                min-height: 95vh;
+                margin: 2.5vh auto;
+                border-radius: 24px;
+                overflow: hidden;
+                border: 1px solid #e2e8f0;
+            }
+        }
+
+        /* Tablet Landscape & Desktop */
+        @media (min-width: 1024px) {
+            .app-shell {
+                max-width: 900px;
+                min-height: 90vh;
+                margin: 5vh auto;
+            }
+        }
+
+        /* Status Badges */
+        .sync-badge {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 10px;
+            font-weight: 800;
+            padding: 4px 10px;
+            border-radius: 20px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            cursor: pointer;
+        }
+
+        .status-online { background: #dcfce7; color: #166534; }
+        .status-offline { background: #fef3c7; color: #92400e; }
+        .status-syncing { background: #dbeafe; color: #1e40af; }
+        .status-error { background: #fee2e2; color: #991b1b; }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .animate-spin-slow { animation: spin 2s linear infinite; }
+        
+        /* Menu Button */
+        .menu-btn {
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 12px;
+            background: #f8fafc;
+            color: #475569;
+            transition: all 0.2s;
+        }
+        .menu-btn:hover { background: #e2e8f0; color: #1e293b; }
+        
+        .menu-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            width: 100%;
+            padding: 12px 16px;
+            font-size: 14px;
+            font-weight: 600;
+            color: #334155;
+            border-radius: 12px;
+            transition: all 0.2s;
+            text-align: left;
+        }
+        .menu-item:hover { background: #f1f5f9; color: #0f172a; }
+        .menu-item span { font-size: 20px; color: #64748b; }
+    </style>
+</head>
+<body class="text-slate-800 select-none">
+
+    <!-- Loading State -->
+    <div id="loader" class="loading-overlay hidden">
+        <div class="flex flex-col items-center">
+            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+            <p class="mt-4 text-sm font-bold text-slate-600" id="loader-text">Memproses...</p>
+        </div>
+    </div>
+
+    <!-- Setup Modal -->
+    <div id="setup-modal" class="loading-overlay hidden">
+        <div class="bg-white rounded-3xl shadow-2xl p-8 max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div class="text-center mb-6">
+                <div class="bg-green-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <span class="material-icons text-green-600 text-3xl">cloud</span>
+                </div>
+                <h2 class="text-2xl font-bold text-slate-900 mb-2">Setup Google Sheets</h2>
+                <p class="text-sm text-slate-600">Hubungkan dengan Google Sheets untuk sync otomatis</p>
+            </div>
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-2">Google Apps Script URL (Wajib)</label>
+                    <input type="url" id="sheet-url" placeholder="https://script.google.com/macros/s/..." 
+                        class="w-full px-4 py-3 rounded-xl border-2 border-slate-200 focus:border-indigo-500 focus:outline-none text-sm bg-slate-50">
+                    <p class="text-xs text-slate-500 mt-1">Paste URL Web App dari Google Apps Script</p>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-2">Google Spreadsheet URL (Opsional)</label>
+                    <input type="url" id="sheet-browser-url" placeholder="https://docs.google.com/spreadsheets/d/..." 
+                        class="w-full px-4 py-3 rounded-xl border-2 border-slate-200 focus:border-indigo-500 focus:outline-none text-sm bg-slate-50">
+                    <p class="text-xs text-slate-500 mt-1">Untuk tombol "Lihat Spreadsheet" di dashboard</p>
+                </div>
+
+                <div class="bg-blue-50 border border-blue-200 rounded-xl p-4">
+                    <h3 class="font-bold text-sm text-blue-900 mb-2 flex items-center gap-2">
+                        <span class="material-icons text-sm">info</span>
+                        Cara Setup:
+                    </h3>
+                    <ol class="text-xs text-blue-800 space-y-1 list-decimal list-inside">
+                        <li>Buat Google Sheets baru</li>
+                        <li>Extensions → Apps Script</li>
+                        <li>Copy script yang disediakan</li>
+                        <li>Deploy → New deployment → Web app</li>
+                        <li><b>PENTING:</b> Set "Who has access" ke <b>"Anyone"</b></li>
+                        <li>Copy URL Web App dan paste di atas</li>
+                    </ol>
+                    <button onclick="showScriptCode()" class="mt-3 text-xs font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1">
+                        <span class="material-icons text-sm">code</span>
+                        Lihat Script Code
+                    </button>
+                </div>
+
+                <div class="flex gap-3">
+                    <button onclick="skipSetup()" class="flex-1 px-4 py-3 rounded-xl border-2 border-slate-200 text-slate-700 font-semibold hover:bg-slate-50 btn-press">
+                        Skip (Offline Mode)
+                    </button>
+                    <button onclick="saveSheetConfig()" class="flex-1 px-4 py-3 rounded-xl bg-indigo-600 text-white font-semibold hover:bg-indigo-700 btn-press">
+                        Simpan & Connect
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Script Code Modal (UPDATED DENGAN UPSERT LOGIC) -->
+    <div id="script-modal" class="loading-overlay hidden" onclick="closeScriptModal()">
+        <div class="bg-white rounded-3xl shadow-2xl p-6 max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto" onclick="event.stopPropagation()">
+            <div class="flex justify-between items-start mb-4">
+                <h3 class="text-xl font-bold text-slate-900">Google Apps Script Code</h3>
+                <button onclick="closeScriptModal()" class="text-slate-400 hover:text-slate-600">
+                    <span class="material-icons">close</span>
+                </button>
+            </div>
+            <p class="text-sm text-slate-600 mb-4">Copy code ini ke Google Apps Script Editor. (Sudah diperbarui dengan Upsert Logic agar data aman multi-device):</p>
+            <button onclick="copyScriptCode()" class="mb-3 px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-semibold hover:bg-green-700 btn-press flex items-center gap-2">
+                <span class="material-icons text-sm">content_copy</span>
+                Copy Code
+            </button>
+            <pre id="script-code" class="bg-slate-900 text-green-400 p-4 rounded-xl text-xs overflow-x-auto select-all">
+// Google Apps Script untuk E-Tamu
+function doGet(e) {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  
+  // Baca semua data
+  const data = sheet.getDataRange().getValues();
+  const headers = data[0];
+  const rows = data.slice(1);
+  
+  const guests = rows.map(row => {
+    const guest = {};
+    headers.forEach((header, i) => {
+      guest[header] = row[i];
+    });
+    return guest;
+  });
+  
+  return ContentService.createTextOutput(JSON.stringify({
+    success: true,
+    data: guests,
+    // Mengembalikan URL spreadsheet agar bisa dibuka di aplikasi
+    sheetUrl: SpreadsheetApp.getActiveSpreadsheet().getUrl()
+  })).setMimeType(ContentService.MimeType.JSON);
+}
+
+function doPost(e) {
+  try {
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+    // Parse contents even if sent as text/plain
+    const data = JSON.parse(e.postData.contents);
+    
+    // Setup headers jika sheet kosong
+    if (sheet.getLastRow() === 0) {
+      sheet.appendRow(['id', 'name', 'agency', 'purpose', 'phone', 'date', 'time', 'signature', 'syncedAt']);
+    }
+    
+    if (data.action === 'create') {
+      // Tambah data baru
+      sheet.appendRow([
+        data.guest.id,
+        data.guest.name,
+        data.guest.agency,
+        data.guest.purpose,
+        data.guest.phone,
+        data.guest.date,
+        data.guest.time,
+        data.guest.signature || '',
+        new Date().toISOString()
+      ]);
+      
+      return ContentService.createTextOutput(JSON.stringify({
+        success: true,
+        message: 'Data berhasil disimpan',
+        sheetUrl: SpreadsheetApp.getActiveSpreadsheet().getUrl()
+      })).setMimeType(ContentService.MimeType.JSON);
+      
+    } else if (data.action === 'delete') {
+      // Hapus data
+      const dataRange = sheet.getDataRange();
+      const values = dataRange.getValues();
+      
+      for (let i = values.length - 1; i >= 1; i--) {
+        if (values[i][0] == data.id) {
+          sheet.deleteRow(i + 1);
+          break;
+        }
+      }
+      
+      return ContentService.createTextOutput(JSON.stringify({
+        success: true,
+        message: 'Data berhasil dihapus'
+      })).setMimeType(ContentService.MimeType.JSON);
+      
+    } else if (data.action === 'sync_all') {
+      // PERBAIKAN: Jangan hapus semua data! Lakukan pencocokan ID (Upsert) untuk mencegah bentrok multi-device
+      const dataRange = sheet.getDataRange();
+      const existingData = dataRange.getValues();
+      const existingIds = existingData.slice(1).map(row => String(row[0])); 
+      
+      let added = 0;
+      data.guests.forEach(guest => {
+        // Jika ID belum ada di database, tambahkan sebagai baris baru
+        if (!existingIds.includes(String(guest.id))) {
+          sheet.appendRow([
+            guest.id,
+            guest.name,
+            guest.agency,
+            guest.purpose,
+            guest.phone,
+            guest.date,
+            guest.time,
+            guest.signature || '',
+            new Date().toISOString()
+          ]);
+          added++;
+        }
+      });
+      
+      return ContentService.createTextOutput(JSON.stringify({
+        success: true,
+        message: `${added} data baru berhasil ditambahkan dari hasil sync`,
+        sheetUrl: SpreadsheetApp.getActiveSpreadsheet().getUrl()
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+    
+  } catch (error) {
+    return ContentService.createTextOutput(JSON.stringify({
+      success: false,
+      error: error.toString()
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+}
+            </pre>
+        </div>
+    </div>
+
+    <div class="app-shell relative overflow-hidden flex flex-col">
+        
+        <!-- Header -->
+        <header class="bg-white px-6 py-5 border-b border-slate-100 flex items-center justify-between sticky top-0 z-20 shadow-sm flex-none">
+            <div class="flex items-center gap-4">
+                <div class="bg-indigo-600 p-2.5 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-100">
+                    <span class="material-icons text-white text-2xl">face</span>
+                </div>
+                <div>
+                    <h1 class="font-bold text-xl text-slate-900 leading-none mb-1">E-Tamu</h1>
+                    <div class="flex flex-col">
+                        <p class="text-[10px] text-indigo-500 font-bold tracking-widest uppercase">Buku Tamu Digital</p>
+                        <p class="text-[9px] text-slate-400 font-bold tracking-widest uppercase">SMK QUEEN AL-FALAH</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-3">
+                <!-- Status Badge -->
+                <div id="auth-status" class="sync-badge status-offline hidden md:flex" onclick="showSyncMenu()">
+                    <span id="status-text">OFFLINE</span>
+                    <div class="w-2 h-2 rounded-full bg-yellow-600" id="status-indicator"></div>
+                </div>
+
+                <!-- Quick Action Menu Button -->
+                <button onclick="toggleQuickMenu()" class="menu-btn btn-press relative">
+                    <span class="material-icons text-slate-600">widgets</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- Status/Sync Menu (Dropdown) -->
+        <div id="sync-menu" class="hidden absolute top-20 right-20 bg-white rounded-2xl shadow-2xl border border-slate-100 p-4 z-30 w-72">
+            <div class="flex justify-between items-center mb-3">
+                <h3 class="font-bold text-slate-900">Status Sinkronisasi</h3>
+                <button onclick="closeSyncMenu()" class="text-slate-400 hover:text-slate-600">
+                    <span class="material-icons text-sm">close</span>
+                </button>
+            </div>
+            
+            <div id="sync-status-detail" class="space-y-3 mb-4">
+                <div class="flex items-center justify-between text-sm">
+                    <span class="text-slate-600">Mode:</span>
+                    <span id="mode-text" class="font-bold text-slate-900">Offline</span>
+                </div>
+                <div class="flex items-center justify-between text-sm">
+                    <span class="text-slate-600">Data Lokal:</span>
+                    <span id="local-count" class="font-bold text-indigo-600">0</span>
+                </div>
+                <div class="flex items-center justify-between text-sm">
+                    <span class="text-slate-600">Pending Sync:</span>
+                    <span id="pending-count" class="font-bold text-amber-600">0</span>
+                </div>
+                <div class="flex items-center justify-between text-sm">
+                    <span class="text-slate-600">Last Sync:</span>
+                    <span id="last-sync" class="font-bold text-slate-900">Belum pernah</span>
+                </div>
+            </div>
+
+            <div class="space-y-2">
+                <button onclick="manualSync()" class="w-full px-4 py-2.5 bg-indigo-600 text-white rounded-xl font-semibold hover:bg-indigo-700 btn-press flex items-center justify-center gap-2">
+                    <span class="material-icons text-sm">sync</span>
+                    Sync Sekarang
+                </button>
+                <button onclick="openSetup()" class="w-full px-4 py-2.5 bg-slate-100 text-slate-700 rounded-xl font-semibold hover:bg-slate-200 btn-press flex items-center justify-center gap-2">
+                    <span class="material-icons text-sm">settings</span>
+                    Konfigurasi
+                </button>
+            </div>
+        </div>
+
+        <!-- Quick Action Menu (Dropdown) -->
+        <div id="quick-menu" class="hidden absolute top-20 right-4 bg-white rounded-2xl shadow-2xl border border-slate-100 p-2 z-40 w-64 transform transition-all origin-top-right">
+            <div class="p-3 border-b border-slate-100 mb-1 flex justify-between items-center">
+                <h3 class="font-bold text-slate-900 text-sm">Aksi Cepat</h3>
+                <button onclick="toggleQuickMenu()" class="text-slate-400 hover:text-slate-600">
+                    <span class="material-icons text-sm">close</span>
+                </button>
+            </div>
+            <div class="flex flex-col gap-1 p-1">
+                 <!-- Tombol Install PWA (Akan muncul otomatis jika support) -->
+                 <button onclick="handleQuickAction('install')" id="btn-install-app" class="hidden menu-item btn-press bg-indigo-50 border border-indigo-100">
+                    <span class="material-icons text-indigo-600">install_mobile</span>
+                    Install Aplikasi
+                </button>
+                <div id="install-divider" class="hidden border-b border-slate-100 my-1"></div>
+
+                <button onclick="handleQuickAction('form')" class="menu-item btn-press">
+                    <span class="material-icons text-indigo-500">add_circle</span>
+                    Tambah Tamu
+                </button>
+                <button onclick="handleQuickAction('excel')" class="menu-item btn-press">
+                    <span class="material-icons text-green-600">file_download</span>
+                    Export Excel
+                </button>
+                <button onclick="handleQuickAction('word')" class="menu-item btn-press">
+                    <span class="material-icons text-blue-600">description</span>
+                    Export Word
+                </button>
+                <button onclick="handleQuickAction('sync')" class="menu-item btn-press">
+                    <span class="material-icons text-amber-500">sync</span>
+                    Sync Data
+                </button>
+                <button onclick="handleQuickAction('load')" class="menu-item btn-press">
+                    <span class="material-icons text-purple-500">cloud_download</span>
+                    Load Sheet
+                </button>
+                <button onclick="handleQuickAction('sheet')" class="menu-item btn-press">
+                    <span class="material-icons text-orange-500">table_view</span>
+                    Lihat Spreadsheet
+                </button>
+            </div>
+        </div>
+
+        <!-- Bulk Action Bar -->
+        <div id="bulk-action-bar" class="hidden bg-indigo-600 px-6 py-4 flex items-center justify-between animate-fade-in text-white shadow-lg z-30">
+            <div class="flex items-center gap-3">
+                <span class="material-icons text-lg">check_circle</span>
+                <span id="selected-count" class="text-sm font-bold">0 dipilih</span>
+            </div>
+            <div class="flex gap-4">
+                <button onclick="db.resetSelection()" class="text-xs font-bold uppercase tracking-wide opacity-80 hover:opacity-100">Batal</button>
+                <button onclick="db.deleteSelected()" class="bg-white text-red-600 px-4 py-1.5 rounded-lg text-xs font-black uppercase shadow-sm btn-press">Hapus</button>
+            </div>
+        </div>
+
+        <!-- Main Content Area -->
+        <main id="app-content" class="flex-1 overflow-y-auto p-5 md:p-8 bg-slate-50 custom-scrollbar relative">
+            <!-- Konten dimuat secara dinamis -->
+        </main>
+
+        <!-- Navigation Bar -->
+        <nav class="bg-white border-t border-slate-100 px-8 py-4 flex justify-between items-center sticky bottom-0 z-30 shadow-[0_-5px_15px_-3px_rgba(0,0,0,0.05)] flex-none">
+            <button onclick="router.navigate('dashboard')" class="nav-btn flex flex-col items-center gap-1.5 text-slate-400 group" id="nav-dashboard">
+                <span class="material-icons text-3xl group-hover:scale-110 transition-transform">grid_view</span>
+                <span class="text-[10px] font-bold">Beranda</span>
+            </button>
+            
+            <div class="relative -top-8">
+                <button onclick="router.navigate('form')" class="btn-press bg-indigo-600 text-white w-16 h-16 rounded-2xl shadow-xl shadow-indigo-200 flex items-center justify-center border-4 border-white transition-all hover:bg-indigo-700">
+                    <span class="material-icons text-3xl">add</span>
+                </button>
+            </div>
+
+            <button onclick="router.navigate('history')" class="nav-btn flex flex-col items-center gap-1.5 text-slate-400 group" id="nav-history">
+                <span class="material-icons text-3xl group-hover:scale-110 transition-transform">history</span>
+                <span class="text-[10px] font-bold">Riwayat</span>
+            </button>
+        </nav>
+
+        <!-- Watermark -->
+        <div class="bg-white text-center py-3 text-[9px] text-slate-300 font-bold tracking-widest uppercase select-none border-t border-slate-50 flex-none">
+            SINCE 2026
+        </div>
+
+        <!-- Notification Toast -->
+        <div id="toast" class="fixed bottom-28 left-1/2 transform -translate-x-1/2 bg-slate-900 text-white px-6 py-3 rounded-full shadow-2xl flex items-center gap-3 text-sm font-semibold z-50 transition-all duration-300 opacity-0 pointer-events-none translate-y-4">
+            <div class="bg-green-500 rounded-full p-1 flex items-center justify-center">
+                <span class="material-icons text-[14px]">done</span>
+            </div>
+            <span id="toast-msg">Selesai!</span>
+        </div>
+    </div>
+
+    <!-- ================================================================= -->
+    <!-- BAGIAN JAVASCRIPT -->
+    <!-- ================================================================= -->
+    <script>
+        // ============================================
+        // PWA MANAGER
+        // ============================================
+        const pwaManager = {
+            deferredPrompt: null,
+
+            init() {
+                this.injectManifest();
+                window.addEventListener('beforeinstallprompt', (e) => {
+                    e.preventDefault();
+                    this.deferredPrompt = e;
+                    this.showInstallButton();
+                });
+
+                window.addEventListener('appinstalled', () => {
+                    this.deferredPrompt = null;
+                    this.hideInstallButton();
+                    utils.showToast("Terima kasih telah menginstall!");
+                });
+            },
+
+            injectManifest() {
+                const iconSvg = `data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIiBzdHlsZT0iYmFja2dyb3VuZC1jb2xvcjogIzRmNDZlNTsiPjxyZWN0IHdpZHRoPSI1MTIiIGhlaWdodD0iNTEyIiByeD0iMTI4IiBmaWxsPSIjNGY0NmU1Ii8+PHBhdGggZD0iTTI1NiAxOTJjNDQuMiAwIDgwLTM1LjggODAtODB1cy0zNS44LTgwLTgwLTgwLTgwIDM1LjgtODAgODAgMzUuOCA4MCA4MCA4MHptMCA0NGMtODguNCAwLTE2MCA3MS42LTE2MCAxNjB2MzJoMzIwdi0zMmMwLTg4LjQtNzEuNi0xNjAtMTYwLTE2MHoiIGZpbGw9IndoaXRlIi8+PC9zdmc+`;
+                
+                const manifest = {
+                    "name": "E-Tamu Digital Guestbook",
+                    "short_name": "E-Tamu",
+                    "start_url": ".",
+                    "display": "standalone",
+                    "background_color": "#ffffff",
+                    "theme_color": "#4f46e5",
+                    "orientation": "portrait",
+                    "icons": [
+                        {
+                            "src": iconSvg,
+                            "type": "image/svg+xml",
+                            "sizes": "192x192 512x512"
+                        }
+                    ]
+                };
+
+                const stringManifest = JSON.stringify(manifest);
+                const blob = new Blob([stringManifest], {type: 'application/json'});
+                const manifestURL = URL.createObjectURL(blob);
+                
+                const link = document.createElement('link');
+                link.rel = 'manifest';
+                link.href = manifestURL;
+                document.head.appendChild(link);
+            },
+
+            showInstallButton() {
+                const btn = document.getElementById('btn-install-app');
+                const div = document.getElementById('install-divider');
+                if (btn) btn.classList.remove('hidden');
+                if (div) div.classList.remove('hidden');
+            },
+
+            hideInstallButton() {
+                const btn = document.getElementById('btn-install-app');
+                const div = document.getElementById('install-divider');
+                if (btn) btn.classList.add('hidden');
+                if (div) div.classList.add('hidden');
+            },
+
+            async triggerInstall() {
+                if (!this.deferredPrompt) {
+                    utils.showToast("Aplikasi sudah terinstall atau browser tidak mendukung.");
+                    return;
+                }
+                this.deferredPrompt.prompt();
+                const { outcome } = await this.deferredPrompt.userChoice;
+                this.deferredPrompt = null;
+                if (outcome === 'accepted') {
+                    this.hideInstallButton();
+                }
+            }
+        };
+
+        // ============================================
+        // CONFIGURATIONS
+        // ============================================
+        const STORAGE_KEY = 'etamu_v3_data';
+        const CONFIG_KEY = 'etamu_sheet_config';
+        const SYNC_QUEUE_KEY = 'etamu_sync_queue';
+        const LAST_SYNC_KEY = 'etamu_last_sync';
+
+        // DEFAULT URLs
+        const DEFAULT_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyP64vdG6UiwVSwdG1l1JQkniTrHd9dbi82mXwdRHFOIDuTYJH1yiCaSVPesIbyg1RLNg/exec";
+        const DEFAULT_SHEET_URL = "https://docs.google.com/spreadsheets/d/1iFse0NhQcCnaaX3vXZzq25_VzfNlSwxDlqNpBkbaq_Q/edit?gid=0#gid=0";
+
+        // ============================================
+        // GOOGLE SHEETS SYNC MANAGER
+        // ============================================
+        const sheetsSync = {
+            config: null,
+            isOnline: navigator.onLine,
+            isSyncing: false,
+
+            init() {
+                const savedConfig = localStorage.getItem(CONFIG_KEY);
+                if (savedConfig) {
+                    this.config = JSON.parse(savedConfig);
+                } else {
+                    this.config = {
+                        url: DEFAULT_SCRIPT_URL,
+                        sheetUrl: DEFAULT_SHEET_URL
+                    };
+                    localStorage.setItem(CONFIG_KEY, JSON.stringify(this.config));
+                }
+
+                window.addEventListener('online', () => {
+                    this.isOnline = true;
+                    this.updateStatus();
+                    this.autoSync();
+                });
+
+                window.addEventListener('offline', () => {
+                    this.isOnline = false;
+                    this.updateStatus();
+                });
+
+                this.updateStatus();
+                
+                if (this.isOnline) {
+                    setTimeout(() => this.autoSync(), 2000);
+                }
+            },
+
+            showSetup() {
+                document.getElementById('setup-modal').classList.remove('hidden');
+            },
+
+            saveConfig(url, sheetUrl) {
+                this.config = { url, sheetUrl };
+                localStorage.setItem(CONFIG_KEY, JSON.stringify(this.config));
+                utils.showToast('Konfigurasi tersimpan!');
+            },
+
+            updateStatus() {
+                const statusText = document.getElementById('status-text');
+                const statusIndicator = document.getElementById('status-indicator');
+                const authStatus = document.getElementById('auth-status');
+                const modeText = document.getElementById('mode-text');
+                const localCount = document.getElementById('local-count');
+                const pendingCount = document.getElementById('pending-count');
+
+                if (localCount) localCount.textContent = state.guests.length;
+                if (pendingCount) pendingCount.textContent = this.getSyncQueue().length;
+
+                if (this.isSyncing) {
+                    authStatus.className = 'sync-badge status-syncing';
+                    statusText.textContent = 'SYNCING';
+                    statusIndicator.className = 'w-2 h-2 rounded-full bg-blue-500 animate-spin-slow';
+                    if (modeText) modeText.textContent = 'Syncing...';
+                } else if (!this.config) {
+                    authStatus.className = 'sync-badge status-offline';
+                    statusText.textContent = 'NOT SETUP';
+                    statusIndicator.className = 'w-2 h-2 rounded-full bg-slate-400';
+                    if (modeText) modeText.textContent = 'Not Configured';
+                } else if (this.isOnline) {
+                    authStatus.className = 'sync-badge status-online';
+                    statusText.textContent = 'ONLINE';
+                    statusIndicator.className = 'w-2 h-2 rounded-full bg-green-500 animate-pulse';
+                    if (modeText) modeText.textContent = 'Online & Synced';
+                } else {
+                    authStatus.className = 'sync-badge status-offline';
+                    statusText.textContent = 'OFFLINE';
+                    statusIndicator.className = 'w-2 h-2 rounded-full bg-yellow-600';
+                    if (modeText) modeText.textContent = 'Offline Mode';
+                }
+
+                const lastSyncEl = document.getElementById('last-sync');
+                if (lastSyncEl) {
+                    const lastSync = localStorage.getItem(LAST_SYNC_KEY);
+                    if (lastSync) {
+                        const date = new Date(lastSync);
+                        lastSyncEl.textContent = date.toLocaleString('id-ID', { 
+                            day: '2-digit', 
+                            month: 'short', 
+                            hour: '2-digit', 
+                            minute: '2-digit' 
+                        });
+                    }
+                }
+            },
+
+            getSyncQueue() {
+                return JSON.parse(localStorage.getItem(SYNC_QUEUE_KEY) || '[]');
+            },
+
+            addToSyncQueue(action, data) {
+                const queue = this.getSyncQueue();
+                queue.push({ action, data, timestamp: Date.now() });
+                localStorage.setItem(SYNC_QUEUE_KEY, JSON.stringify(queue));
+                this.updateStatus();
+            },
+
+            clearSyncQueue() {
+                localStorage.removeItem(SYNC_QUEUE_KEY);
+                this.updateStatus();
+            },
+
+            async syncToSheet(action, data) {
+                if (!this.config || !this.config.url) {
+                    this.addToSyncQueue(action, data);
+                    return false;
+                }
+
+                if (!this.isOnline) {
+                    this.addToSyncQueue(action, data);
+                    return false;
+                }
+
+                try {
+                    const response = await fetch(this.config.url, {
+                        method: 'POST',
+                        redirect: 'follow', 
+                        headers: {
+                            'Content-Type': 'text/plain;charset=utf-8', 
+                        },
+                        body: JSON.stringify({ action, ...data })
+                    });
+                    
+                    const result = await response.json().catch(() => ({ success: true }));
+                    
+                    if (result.sheetUrl && (!this.config.sheetUrl || this.config.sheetUrl !== result.sheetUrl)) {
+                        this.saveConfig(this.config.url, result.sheetUrl);
+                    }
+
+                    return true;
+
+                } catch (error) {
+                    this.addToSyncQueue(action, data);
+                    return false;
+                }
+            },
+
+            async autoSync() {
+                if (this.isSyncing || !this.isOnline || !this.config) return;
+
+                this.isSyncing = true;
+                this.updateStatus();
+
+                try {
+                    const guests = db.getGuests();
+                    await this.syncToSheet('sync_all', { guests });
+                    this.clearSyncQueue();
+                    localStorage.setItem(LAST_SYNC_KEY, new Date().toISOString());
+                } catch (error) {
+                    console.error('Auto sync error:', error);
+                } finally {
+                    this.isSyncing = false;
+                    this.updateStatus();
+                }
+            },
+
+            async loadFromSheet() {
+                if (!this.config || !this.config.url) {
+                    utils.showToast('Konfigurasi Google Sheets belum diatur');
+                    return;
+                }
+
+                if (!this.isOnline) {
+                    utils.showToast('Tidak ada koneksi internet');
+                    return;
+                }
+
+                utils.toggleLoader(true, 'Memuat dari Google Sheets...');
+
+                try {
+                    const response = await fetch(this.config.url, {
+                        method: 'GET',
+                        redirect: 'follow'
+                    });
+                    
+                    if (!response.ok) throw new Error('Network response was not ok');
+
+                    const result = await response.json();
+
+                    if (result.success && result.data) {
+                        if (result.sheetUrl && (!this.config.sheetUrl || this.config.sheetUrl !== result.sheetUrl)) {
+                            this.saveConfig(this.config.url, result.sheetUrl);
+                        }
+
+                        const localGuests = db.getGuests();
+                        const sheetGuests = result.data;
+                        const guestMap = new Map();
+                        
+                        sheetGuests.forEach(g => {
+                            if (g.id) guestMap.set(g.id.toString(), g);
+                        });
+
+                        localGuests.forEach(g => {
+                            guestMap.set(g.id.toString(), g);
+                        });
+
+                        // PERBAIKAN: Sort berdasarkan tanggal dan waktu yang digabung (karena ID sekarang String/UUID)
+                        const mergedGuests = Array.from(guestMap.values())
+                            .sort((a, b) => new Date(b.date + ' ' + b.time) - new Date(a.date + ' ' + a.time));
+
+                        localStorage.setItem(STORAGE_KEY, JSON.stringify(mergedGuests));
+                        state.guests = mergedGuests;
+                        
+                        router.navigate(state.view);
+                        utils.showToast(`${mergedGuests.length} data dimuat dari Google Sheets`);
+                    }
+                } catch (error) {
+                    utils.showToast('Gagal memuat dari Google Sheets');
+                } finally {
+                    utils.toggleLoader(false);
+                }
+            }
+        };
+
+        // ============================================
+        // DATABASE MANAGER
+        // ============================================
+        const db = {
+            getGuests: () => JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'),
+            
+            saveGuest: async (guest) => {
+                const guests = db.getGuests();
+                guests.unshift(guest);
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(guests));
+                state.guests = guests;
+                await sheetsSync.syncToSheet('create', { guest });
+                sheetsSync.updateStatus();
+            },
+            
+            deleteSingle: async (id) => {
+                if(confirm("Hapus data tamu ini?")) {
+                    const guests = db.getGuests().filter(g => g.id !== id);
+                    localStorage.setItem(STORAGE_KEY, JSON.stringify(guests));
+                    state.guests = guests;
+                    await sheetsSync.syncToSheet('delete', { id });
+                    utils.showToast("Data dihapus");
+                    router.navigate('history');
+                    sheetsSync.updateStatus();
+                }
+            },
+            
+            deleteSelected: async () => {
+                if(state.selectedIds.length === 0) return;
+                if(confirm(`Hapus ${state.selectedIds.length} data yang dipilih?`)) {
+                    const guests = db.getGuests().filter(g => !state.selectedIds.includes(g.id));
+                    localStorage.setItem(STORAGE_KEY, JSON.stringify(guests));
+                    state.guests = guests;
+                    for (const id of state.selectedIds) {
+                        await sheetsSync.syncToSheet('delete', { id });
+                    }
+                    state.selectedIds = [];
+                    utils.updateBulkBar();
+                    utils.showToast("Data terpilih dihapus");
+                    router.navigate('history');
+                    sheetsSync.updateStatus();
+                }
+            },
+            
+            resetSelection: () => {
+                state.selectedIds = [];
+                utils.updateBulkBar();
+                router.navigate('history');
+            },
+            
+            clearAll: async () => {
+                if(confirm("Kosongkan semua riwayat? Tindakan ini tidak dapat dibatalkan.")) {
+                    localStorage.removeItem(STORAGE_KEY);
+                    state.guests = [];
+                    state.selectedIds = [];
+                    await sheetsSync.syncToSheet('sync_all', { guests: [] });
+                    utils.updateBulkBar();
+                    router.navigate('history');
+                    utils.showToast("Riwayat dikosongkan");
+                    sheetsSync.updateStatus();
+                }
+            }
+        };
+
+        const state = {
+            view: 'dashboard',
+            searchQuery: '',
+            guests: db.getGuests(),
+            selectedIds: [],
+            chartInstance: null,
+            isDrawing: false,
+            templateGuests: []
+        };
+
+        const $ = (selector) => document.querySelector(selector);
+        
+        const utils = {
+            getTodayDate: () => new Date().toLocaleDateString('en-CA'),
+            formatTime: () => new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', hour12: false }),
+            showToast: (msg) => {
+                const toast = $('#toast');
+                if(toast) {
+                    document.getElementById('toast-msg').innerText = msg;
+                    toast.classList.remove('opacity-0', 'translate-y-4', 'pointer-events-none');
+                    setTimeout(() => toast.classList.add('opacity-0', 'translate-y-4', 'pointer-events-none'), 2500);
+                }
+            },
+            toggleLoader: (show, text = "Mohon tunggu...") => {
+                const loader = $('#loader');
+                if(loader) {
+                    document.getElementById('loader-text').innerText = text;
+                    loader.classList.toggle('hidden', !show);
+                }
+            },
+            updateBulkBar: () => {
+                const bar = $('#bulk-action-bar');
+                if (bar) {
+                    if (state.selectedIds.length > 0) {
+                        bar.classList.remove('hidden');
+                        document.getElementById('selected-count').innerText = `${state.selectedIds.length} dipilih`;
+                    } else {
+                        bar.classList.add('hidden');
+                    }
+                }
+            },
+            triggerDownload: (blob, filename) => {
+                try {
+                    const url = window.URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.download = filename;
+                    document.body.appendChild(link);
+                    link.click();
+                    setTimeout(() => {
+                        document.body.removeChild(link);
+                        window.URL.revokeObjectURL(url);
+                    }, 100);
+                } catch (error) {
+                    androidDownload(blob, filename);
+                }
+            },
+            exportCSV: () => {
+                if (state.guests.length === 0) {
+                    utils.showToast('Tidak ada data!');
+                    return;
+                }
+                const header = "No,Nama,Instansi,Keperluan,No HP,Tanggal,Waktu\n";
+                const rows = state.guests.map((g, i) =>
+                    `${i+1},"${g.name}","${g.agency}","${g.purpose}","${g.phone}","${g.date}","${g.time}"`
+                ).join("\n");
+                const blob = new Blob(["\ufeff" + header + rows], { type: 'text/csv;charset=utf-8' });
+                utils.triggerDownload(blob, `Laporan_Tamu_${utils.getTodayDate()}.csv`);
+                utils.showToast('Excel sedang diunduh');
+            },
+            exportWord: async () => {
+                if (state.guests.length === 0) {
+                    utils.showToast('Tidak ada data!');
+                    return;
+                }
+                utils.toggleLoader(true, 'Menyusun Word...');
+                
+                const base64ToUint8Array = (base64) => {
+                    const binaryString = window.atob(base64);
+                    const len = binaryString.length;
+                    const bytes = new Uint8Array(len);
+                    for (let i = 0; i < len; i++) {
+                        bytes[i] = binaryString.charCodeAt(i);
+                    }
+                    return bytes;
+                };
+
+                try {
+                    const { Document, Packer, Paragraph, Table, TableRow, TableCell, TextRun, ImageRun, WidthType, AlignmentType } = docx;
+
+                    const tableHeader = new TableRow({
+                        tableHeader: true,
+                        children: [
+                            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "No", bold: true })], alignment: AlignmentType.CENTER })], width: { size: 5, type: WidthType.PERCENTAGE } }),
+                            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Waktu", bold: true })], alignment: AlignmentType.CENTER })], width: { size: 15, type: WidthType.PERCENTAGE } }),
+                            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Nama", bold: true })], alignment: AlignmentType.CENTER })], width: { size: 20, type: WidthType.PERCENTAGE } }),
+                            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Instansi", bold: true })], alignment: AlignmentType.CENTER })], width: { size: 20, type: WidthType.PERCENTAGE } }),
+                            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Keperluan", bold: true })], alignment: AlignmentType.CENTER })], width: { size: 25, type: WidthType.PERCENTAGE } }),
+                            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Paraf", bold: true })], alignment: AlignmentType.CENTER })], width: { size: 15, type: WidthType.PERCENTAGE } }),
+                        ]
+                    });
+
+                    const dataRows = state.guests.map((g, i) => {
+                        let signatureCellChildren = [new Paragraph("-")];
+                        if (g.signature && g.signature.startsWith('data:image')) {
+                            try {
+                                const base64Data = g.signature.split(',')[1];
+                                const imageBuffer = base64ToUint8Array(base64Data);
+                                signatureCellChildren = [
+                                    new Paragraph({
+                                        children: [
+                                            new ImageRun({
+                                                data: imageBuffer,
+                                                transformation: { width: 80, height: 40 },
+                                                type: "jpeg" // Mendukung hasil kompresi jpeg terbaru
+                                            })
+                                        ],
+                                        alignment: AlignmentType.CENTER
+                                    })
+                                ];
+                            } catch (err) {}
+                        }
+                        return new TableRow({
+                            children: [
+                                new TableCell({ children: [new Paragraph({ text: String(i + 1), alignment: AlignmentType.CENTER })] }),
+                                new TableCell({ children: [new Paragraph(`${g.date}\n${g.time}`)] }),
+                                new TableCell({ children: [new Paragraph(g.name)] }),
+                                new TableCell({ children: [new Paragraph(g.agency)] }),
+                                new TableCell({ children: [new Paragraph(g.purpose)] }),
+                                new TableCell({ children: signatureCellChildren })
+                            ]
+                        });
+                    });
+
+                    const table = new Table({
+                        rows: [tableHeader, ...dataRows],
+                        width: { size: 100, type: WidthType.PERCENTAGE },
+                    });
+
+                    const doc = new Document({
+                        sections: [{
+                            properties: {},
+                            children: [
+                                new Paragraph({
+                                    children: [new TextRun({ text: 'LAPORAN BUKU TAMU DIGITAL', bold: true, size: 28 })],
+                                    alignment: AlignmentType.CENTER,
+                                    spacing: { after: 200 }
+                                }),
+                                new Paragraph({
+                                    children: [new TextRun({ text: `Dicetak pada: ${new Date().toLocaleString('id-ID')}`, italics: true, size: 20 })],
+                                    alignment: AlignmentType.CENTER,
+                                    spacing: { after: 400 }
+                                }),
+                                table
+                            ]
+                        }]
+                    });
+
+                    const blob = await Packer.toBlob(doc);
+                    utils.triggerDownload(blob, `Laporan_Tamu_${utils.getTodayDate()}.docx`);
+                    utils.showToast('Word berhasil diunduh');
+
+                } catch (e) {
+                    utils.showToast('Gagal download Word: ' + e.message);
+                } finally {
+                    utils.toggleLoader(false);
+                }
+            },
+            openRealSheet: () => {
+                if (sheetsSync.config && sheetsSync.config.sheetUrl) {
+                    window.open(sheetsSync.config.sheetUrl, '_blank');
+                } else {
+                    utils.showToast('URL Spreadsheet belum disetting. Buka menu Setup.');
+                    setTimeout(() => openSetup(), 1500); 
+                }
+            },
+
+            parseCSV: (text) => {
+                const lines = text.split('\n');
+                const result = [];
+                let startIndex = 0;
+                if (lines[0] && (lines[0].toLowerCase().includes('nama') || lines[0].toLowerCase().includes('name'))) {
+                    startIndex = 1;
+                }
+                
+                for(let i=startIndex; i<lines.length; i++) {
+                    const line = lines[i].trim();
+                    if(!line) continue;
+                    
+                    const parts = line.split(','); 
+                    
+                    if(parts.length >= 2) {
+                        const name = parts[0].trim().replace(/^"|"$/g, '');
+                        const agency = parts[1].trim().replace(/^"|"$/g, '');
+                        if(name && agency) {
+                            result.push({ name, agency });
+                        }
+                    }
+                }
+                return result;
+            },
+            
+            downloadTemplate: () => {
+                const content = "Nama Lengkap,Asal Instansi\nContoh Nama,Contoh Instansi\nBudi Santoso,PT Maju Jaya";
+                const blob = new Blob([content], { type: 'text/csv;charset=utf-8' });
+                utils.triggerDownload(blob, 'template_tamu.csv');
+            }
+        };
+
+        // ============================================
+        // UI FUNCTIONS
+        // ============================================
+        function showSyncMenu() {
+            document.getElementById('sync-menu').classList.toggle('hidden');
+            document.getElementById('quick-menu').classList.add('hidden');
+            sheetsSync.updateStatus();
+        }
+
+        function closeSyncMenu() {
+            document.getElementById('sync-menu').classList.add('hidden');
+        }
+
+        function toggleQuickMenu() {
+            document.getElementById('quick-menu').classList.toggle('hidden');
+            document.getElementById('sync-menu').classList.add('hidden');
+        }
+
+        function handleQuickAction(action) {
+            toggleQuickMenu(); 
+            switch(action) {
+                case 'install': pwaManager.triggerInstall(); break;
+                case 'form': router.navigate('form'); break;
+                case 'excel': utils.exportCSV(); break;
+                case 'word': utils.exportWord(); break;
+                case 'sync': manualSync(); break;
+                case 'load': sheetsSync.loadFromSheet(); break;
+                case 'sheet': utils.openRealSheet(); break;
+            }
+        }
+
+        function openSetup() {
+            closeSyncMenu();
+            const urlInput = document.getElementById('sheet-url');
+            const sheetUrlInput = document.getElementById('sheet-browser-url');
+
+            if (sheetsSync.config) {
+                if(urlInput) urlInput.value = sheetsSync.config.url || DEFAULT_SCRIPT_URL;
+                if(sheetUrlInput) sheetUrlInput.value = sheetsSync.config.sheetUrl || DEFAULT_SHEET_URL;
+            } else {
+                if(urlInput) urlInput.value = DEFAULT_SCRIPT_URL;
+                if(sheetUrlInput) sheetUrlInput.value = DEFAULT_SHEET_URL;
+            }
+            sheetsSync.showSetup();
+        }
+
+        function saveSheetConfig() {
+            const url = document.getElementById('sheet-url').value.trim();
+            const sheetUrl = document.getElementById('sheet-browser-url').value.trim();
+
+            if (!url) {
+                utils.showToast('URL Script tidak boleh kosong!');
+                return;
+            }
+            if (!url.includes('script.google.com')) {
+                utils.showToast('URL harus dari Google Apps Script!');
+                return;
+            }
+            
+            sheetsSync.saveConfig(url, sheetUrl);
+            document.getElementById('setup-modal').classList.add('hidden');
+            sheetsSync.updateStatus();
+            setTimeout(() => sheetsSync.autoSync(), 1000);
+        }
+
+        function skipSetup() {
+            document.getElementById('setup-modal').classList.add('hidden');
+            utils.showToast('Mode offline - data tersimpan lokal');
+        }
+
+        function showScriptCode() {
+            document.getElementById('script-modal').classList.remove('hidden');
+        }
+
+        function closeScriptModal() {
+            document.getElementById('script-modal').classList.add('hidden');
+        }
+
+        function copyScriptCode() {
+            const code = document.getElementById('script-code').textContent;
+            if (navigator.clipboard && window.isSecureContext) {
+                navigator.clipboard.writeText(code).then(() => {
+                    utils.showToast('Script code berhasil di-copy!');
+                }).catch(err => {
+                    fallbackCopyTextToClipboard(code);
+                });
+            } else {
+                fallbackCopyTextToClipboard(code);
+            }
+        }
+
+        function fallbackCopyTextToClipboard(text) {
+            var textArea = document.createElement("textarea");
+            textArea.value = text;
+            textArea.style.top = "0";
+            textArea.style.left = "0";
+            textArea.style.position = "fixed";
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            try {
+                var successful = document.execCommand('copy');
+                if(successful) {
+                    utils.showToast('Script code berhasil di-copy!');
+                } else {
+                    utils.showToast('Gagal copy otomatis. Silakan blok & copy manual.');
+                }
+            } catch (err) {
+                utils.showToast('Gagal copy otomatis.');
+            }
+            document.body.removeChild(textArea);
+        }
+
+        async function manualSync() {
+            closeSyncMenu();
+            if (!sheetsSync.config) {
+                openSetup();
+                return;
+            }
+            utils.toggleLoader(true, 'Sinkronisasi...');
+            await sheetsSync.autoSync();
+            utils.toggleLoader(false);
+            utils.showToast('Sinkronisasi selesai!');
+        }
+
+        // ============================================
+        // VIEWS
+        // ============================================
+        const views = {
+            dashboard: () => {
+                const todayCount = state.guests.filter(g => g.date === utils.getTodayDate()).length;
+                const weekCount = state.guests.filter(g => {
+                    const guestDate = new Date(g.date);
+                    const weekAgo = new Date();
+                    weekAgo.setDate(weekAgo.getDate() - 7);
+                    return guestDate >= weekAgo;
+                }).length;
+
+                const uniqueAgencies = [...new Set(state.guests.map(g => g.agency))].length;
+
+                return `
+                    <div class="space-y-6 fade-in pb-20">
+                        <div>
+                            <h2 class="text-2xl font-bold text-slate-900 mb-1">Selamat Datang!</h2>
+                            <p class="text-sm text-slate-500">Dashboard ringkasan kunjungan tamu</p>
+                        </div>
+
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            <div class="bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-2xl p-5 text-white shadow-lg">
+                                <div class="flex items-center gap-2 mb-2">
+                                    <span class="material-icons text-2xl opacity-80">today</span>
+                                    <span class="text-xs font-bold uppercase tracking-wide opacity-90">Hari Ini</span>
+                                </div>
+                                <p class="text-4xl font-black">${todayCount}</p>
+                                <p class="text-xs mt-1 opacity-75">Tamu terdaftar</p>
+                            </div>
+
+                            <div class="bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl p-5 text-white shadow-lg">
+                                <div class="flex items-center gap-2 mb-2">
+                                    <span class="material-icons text-2xl opacity-80">date_range</span>
+                                    <span class="text-xs font-bold uppercase tracking-wide opacity-90">7 Hari</span>
+                                </div>
+                                <p class="text-4xl font-black">${weekCount}</p>
+                                <p class="text-xs mt-1 opacity-75">Kunjungan</p>
+                            </div>
+
+                            <div class="bg-gradient-to-br from-pink-500 to-pink-600 rounded-2xl p-5 text-white shadow-lg">
+                                <div class="flex items-center gap-2 mb-2">
+                                    <span class="material-icons text-2xl opacity-80">business</span>
+                                    <span class="text-xs font-bold uppercase tracking-wide opacity-90">Instansi</span>
+                                </div>
+                                <p class="text-4xl font-black">${uniqueAgencies}</p>
+                                <p class="text-xs mt-1 opacity-75">Berbeda</p>
+                            </div>
+
+                            <div class="bg-gradient-to-br from-teal-500 to-teal-600 rounded-2xl p-5 text-white shadow-lg">
+                                <div class="flex items-center gap-2 mb-2">
+                                    <span class="material-icons text-2xl opacity-80">groups</span>
+                                    <span class="text-xs font-bold uppercase tracking-wide opacity-90">Total</span>
+                                </div>
+                                <p class="text-4xl font-black">${state.guests.length}</p>
+                                <p class="text-xs mt-1 opacity-75">Semua tamu</p>
+                            </div>
+                        </div>
+
+                        <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
+                            <h3 class="font-bold text-slate-900 mb-3 flex items-center gap-2">
+                                <span class="material-icons text-indigo-600">insert_chart</span>
+                                Grafik Kunjungan per Jam
+                            </h3>
+                            <div class="chart-container">
+                                <canvas id="visitChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            },
+
+            form: () => `
+                <div class="max-w-md mx-auto fade-in pb-20">
+                    <div class="mb-6">
+                        <h2 class="text-2xl font-bold text-slate-900 mb-1">Daftar Tamu Baru</h2>
+                        <p class="text-sm text-slate-500">Silakan isi formulir di bawah ini</p>
+                    </div>
+
+                    <div class="bg-indigo-50 rounded-2xl p-5 mb-6 border border-indigo-100">
+                        <div class="flex items-center justify-between mb-3">
+                            <div>
+                                <h3 class="font-bold text-indigo-900 text-sm flex items-center gap-2">
+                                    <span class="material-icons text-sm">upload_file</span>
+                                    Mode Template
+                                </h3>
+                                <p class="text-xs text-indigo-700 mt-0.5">Upload CSV untuk isi otomatis</p>
+                            </div>
+                            <div class="flex gap-2">
+                                <button onclick="utils.downloadTemplate()" class="p-2 bg-white rounded-lg text-indigo-600 shadow-sm border border-indigo-100 hover:bg-indigo-50 btn-press" title="Download Template">
+                                    <span class="material-icons text-lg">download</span>
+                                </button>
+                                <button onclick="document.getElementById('template-upload').click()" class="p-2 bg-indigo-600 rounded-lg text-white shadow-sm hover:bg-indigo-700 btn-press" title="Upload CSV">
+                                    <span class="material-icons text-lg">upload</span>
+                                </button>
+                            </div>
+                        </div>
+                        <input type="file" id="template-upload" class="hidden" accept=".csv" onchange="handleTemplateUpload(this)">
+                        
+                        ${state.templateGuests.length > 0 ? `
+                            <div class="relative animate-fade-in">
+                                <select onchange="fillFromTemplate(this.value)" class="w-full px-4 py-2.5 rounded-xl border border-indigo-200 focus:border-indigo-500 focus:outline-none text-sm bg-white text-slate-700 appearance-none">
+                                    <option value="">-- Pilih Data Tamu (${state.templateGuests.length}) --</option>${state.templateGuests.map((g, i) => `<option value="${i}">${g.name} - ${g.agency}</option>`).join('')}
+                                </select>
+                                <span class="material-icons absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none text-lg">expand_more</span>
+                            </div>
+                        ` : ''}
+                    </div>
+
+                    <form onsubmit="handleSubmit(event)" class="space-y-5">
+                        <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 space-y-4">
+                            <div>
+                                <label class="block text-sm font-semibold text-slate-700 mb-2">Nama Lengkap *</label>
+                                <input type="text" name="name" required placeholder="Contoh: Ahmad Rizki"
+                                    class="w-full px-4 py-3 rounded-xl border-2 border-slate-200 focus:border-indigo-500 focus:outline-none text-slate-900">
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-semibold text-slate-700 mb-2">Instansi/Perusahaan *</label>
+                                <input type="text" name="agency" required placeholder="Contoh: PT Maju Bersama"
+                                    class="w-full px-4 py-3 rounded-xl border-2 border-slate-200 focus:border-indigo-500 focus:outline-none text-slate-900">
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-semibold text-slate-700 mb-2">Keperluan *</label>
+                                <textarea name="purpose" required rows="3" placeholder="Jelaskan keperluan kunjungan..."
+                                    class="w-full px-4 py-3 rounded-xl border-2 border-slate-200 focus:border-indigo-500 focus:outline-none text-slate-900 resize-none"></textarea>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-semibold text-slate-700 mb-2">No. HP (Opsional)</label>
+                                <input type="tel" name="phone" id="phone-input" placeholder="08123456789"
+                                    class="w-full px-4 py-3 rounded-xl border-2 border-slate-200 focus:border-indigo-500 focus:outline-none text-slate-900">
+                            </div>
+                        </div>
+
+                        <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
+                            <label class="block text-sm font-semibold text-slate-700 mb-3">Tanda Tangan *</label>
+                            <div class="border-2 border-dashed border-slate-300 rounded-xl overflow-hidden bg-slate-50">
+                                <canvas id="signature-pad" width="400" height="200"></canvas>
+                            </div>
+                            <button type="button" onclick="sigPad.clear()" 
+                                class="mt-3 w-full py-2 text-sm font-semibold text-slate-600 hover:text-slate-900 flex items-center justify-center gap-2">
+                                <span class="material-icons text-sm">refresh</span>
+                                Hapus & Tanda Tangan Ulang
+                            </button>
+                        </div>
+
+                        <button type="submit" class="w-full py-4 bg-indigo-600 text-white font-bold rounded-xl shadow-lg hover:bg-indigo-700 transition btn-press flex items-center justify-center gap-2">
+                            <span class="material-icons">check_circle</span>
+                            Daftar Sekarang
+                        </button>
+                    </form>
+                </div>
+            `,
+
+            history: () => {
+                const filtered = state.guests.filter(g => 
+                    !state.searchQuery || 
+                    g.name.toLowerCase().includes(state.searchQuery.toLowerCase()) ||
+                    g.agency.toLowerCase().includes(state.searchQuery.toLowerCase())
+                );
+
+                return `
+                    <div class="space-y-4 fade-in pb-20">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <h2 class="text-2xl font-bold text-slate-900 mb-1">Riwayat Tamu</h2>
+                                <p class="text-sm text-slate-500">${filtered.length} data tamu</p>
+                            </div>
+                            ${state.guests.length > 0 ? `
+                                <button onclick="db.clearAll()" class="text-red-600 hover:text-red-700 font-semibold text-sm flex items-center gap-1">
+                                    <span class="material-icons text-sm">delete_sweep</span>
+                                    Hapus Semua
+                                </button>
+                            ` : ''}
+                        </div>
+
+                        ${state.guests.length > 0 ? `
+                            <div class="relative">
+                                <span class="material-icons absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-xl">search</span>
+                                <input type="text" id="search-input" placeholder="Cari nama atau instansi..." value="${state.searchQuery}"
+                                    class="w-full pl-12 pr-4 py-3 rounded-xl border-2 border-slate-200 focus:border-indigo-500 focus:outline-none text-slate-900 bg-white">
+                            </div>
+                        ` : ''}
+
+                        ${filtered.length === 0 ? `
+                            <div class="text-center py-16">
+                                <div class="bg-slate-100 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4">
+                                    <span class="material-icons text-slate-400 text-4xl">inbox</span>
+                                </div>
+                                <h3 class="text-lg font-bold text-slate-900 mb-1">Belum Ada Data</h3>
+                                <p class="text-sm text-slate-500 mb-4">Mulai dengan menambahkan tamu baru</p>
+                                <button onclick="router.navigate('form')" class="px-6 py-3 bg-indigo-600 text-white font-semibold rounded-xl hover:bg-indigo-700 btn-press">
+                                    Tambah Tamu
+                                </button>
+                            </div>
+                        ` : `
+                            <div class="space-y-3">
+                                ${filtered.map(g => `
+                                    <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 hover:shadow-md transition">
+                                        <div class="flex items-start gap-3">
+                                            <input type="checkbox" 
+                                                class="guest-checkbox mt-1" 
+                                                ${state.selectedIds.includes(g.id) ? 'checked' : ''}
+                                                onchange="toggleSelect('${g.id}')">
+                                            
+                                            <div class="flex-1 min-w-0">
+                                                <h3 class="font-bold text-slate-900 mb-1">${g.name}</h3>
+                                                <p class="text-sm text-slate-600 mb-1 flex items-center gap-1">
+                                                    <span class="material-icons text-xs">business</span>
+                                                    ${g.agency}
+                                                </p>
+                                                <p class="text-xs text-slate-500 mb-2">${g.purpose}</p>
+                                                <div class="flex items-center gap-3 text-xs text-slate-500">
+                                                    <span class="flex items-center gap-1">
+                                                        <span class="material-icons text-xs">calendar_today</span>
+                                                        ${g.date}
+                                                    </span>
+                                                    <span class="flex items-center gap-1">
+                                                        <span class="material-icons text-xs">access_time</span>
+                                                        ${g.time}
+                                                    </span>
+                                                </div>
+                                            </div>
+
+                                            <button onclick="db.deleteSingle('${g.id}')" 
+                                                class="text-red-500 hover:text-red-700 p-1">
+                                                <span class="material-icons text-xl">delete</span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        `}
+                    </div>
+                `;
+            }
+        };
+
+        function toggleSelect(id) {
+            const idx = state.selectedIds.indexOf(id);
+            if (idx > -1) {
+                state.selectedIds.splice(idx, 1);
+            } else {
+                state.selectedIds.push(id);
+            }
+            utils.updateBulkBar();
+        }
+
+        // ============================================
+        // SIGNATURE PAD
+        // ============================================
+        const sigPad = {
+            canvas: null,
+            ctx: null,
+            isDrawing: false,
+            lastX: 0,
+            lastY: 0,
+            lastWidth: 0, 
+
+            init() {
+                this.canvas = document.getElementById('signature-pad');
+                if (!this.canvas) return;
+                
+                this.ctx = this.canvas.getContext('2d');
+                const rect = this.canvas.getBoundingClientRect();
+                
+                if (Math.abs(this.lastWidth - rect.width) < 10 && this.lastWidth !== 0) {
+                    return; 
+                }
+
+                this.lastWidth = rect.width;
+                this.canvas.width = rect.width * 2;
+                this.canvas.height = rect.height * 2;
+                this.ctx.scale(2, 2);
+                this.ctx.lineCap = 'round';
+                this.ctx.lineJoin = 'round';
+                this.ctx.lineWidth = 2;
+                this.ctx.strokeStyle = '#1e293b';
+
+                this.canvas.addEventListener('mousedown', this.startDrawing.bind(this));
+                this.canvas.addEventListener('mousemove', this.draw.bind(this));
+                this.canvas.addEventListener('mouseup', this.stopDrawing.bind(this));
+                this.canvas.addEventListener('touchstart', this.startDrawing.bind(this));
+                this.canvas.addEventListener('touchmove', this.draw.bind(this));
+                this.canvas.addEventListener('touchend', this.stopDrawing.bind(this));
+            },
+
+            getCoords(e) {
+                const rect = this.canvas.getBoundingClientRect();
+                const touch = e.touches ? e.touches[0] : e;
+                return {
+                    x: touch.clientX - rect.left,
+                    y: touch.clientY - rect.top
+                };
+            },
+
+            startDrawing(e) {
+                e.preventDefault();
+                this.isDrawing = true;
+                const coords = this.getCoords(e);
+                this.lastX = coords.x;
+                this.lastY = coords.y;
+            },
+
+            draw(e) {
+                if (!this.isDrawing) return;
+                e.preventDefault();
+                const coords = this.getCoords(e);
+                this.ctx.beginPath();
+                this.ctx.moveTo(this.lastX, this.lastY);
+                this.ctx.lineTo(coords.x, coords.y);
+                this.ctx.stroke();
+                this.lastX = coords.x;
+                this.lastY = coords.y;
+            },
+
+            stopDrawing() {
+                this.isDrawing = false;
+            },
+
+            clear() {
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+            },
+
+            isEmpty() {
+                const blank = document.createElement('canvas');
+                blank.width = this.canvas.width;
+                blank.height = this.canvas.height;
+                return this.canvas.toDataURL() === blank.toDataURL();
+            }
+        };
+
+        // ============================================
+        // ROUTER 
+        // ============================================
+        const router = {
+            navigate(viewName) {
+                window.location.hash = viewName;
+            },
+            _render(viewName) {
+                if (!views[viewName]) {
+                    if (viewName !== 'dashboard') {
+                        this.navigate('dashboard');
+                    } else {
+                         document.getElementById('app-content').innerHTML = views.dashboard();
+                    }
+                    return;
+                }
+
+                state.view = viewName;
+                document.getElementById('app-content').innerHTML = views[viewName]();
+                
+                document.querySelectorAll('.nav-btn').forEach(btn => {
+                    btn.classList.remove('text-indigo-600');
+                    btn.classList.add('text-slate-400');
+                });
+                
+                const activeBtn = document.querySelector(`#nav-${viewName}`);
+                if (activeBtn) {
+                    activeBtn.classList.remove('text-slate-400');
+                    activeBtn.classList.add('text-indigo-600');
+                }
+
+                if (viewName === 'dashboard') {
+                    setTimeout(renderChart, 100);
+                }
+
+                if (viewName === 'form') {
+                    setTimeout(() => {
+                        sigPad.init();
+                        const phoneInput = document.getElementById('phone-input');
+                        if (phoneInput) {
+                            phoneInput.oninput = (e) => {
+                                e.target.value = e.target.value.replace(/[^0-9]/g, '').slice(0, 15);
+                            };
+                        }
+                    }, 100);
+                }
+
+                if (viewName === 'history') {
+                    const search = document.getElementById('search-input');
+                    if(search) {
+                        search.oninput = (e) => {
+                            state.searchQuery = e.target.value;
+                            document.getElementById('app-content').innerHTML = views.history();
+                        };
+                    }
+                }
+            }
+        };
+
+        window.addEventListener('hashchange', () => {
+            const viewName = window.location.hash.substring(1);
+            router._render(viewName || 'dashboard');
+        });
+
+        function handleTemplateUpload(input) {
+            const file = input.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const text = e.target.result;
+                const data = utils.parseCSV(text);
+                if (data.length > 0) {
+                    state.templateGuests = data;
+                    utils.showToast(`${data.length} data dimuat!`);
+                    router._render('form'); 
+                } else {
+                    utils.showToast('Gagal membaca CSV atau data kosong');
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function fillFromTemplate(index) {
+            if (index === "") return;
+            const guest = state.templateGuests[index];
+            if (guest) {
+                const form = document.querySelector('form');
+                if (form) {
+                    form.name.value = guest.name;
+                    form.agency.value = guest.agency;
+                    utils.showToast('Data terisi otomatis');
+                }
+            }
+        }
+
+        async function handleSubmit(e) {
+            e.preventDefault();
+            if (sigPad.isEmpty()) {
+                utils.showToast("Silakan bubuhkan tanda tangan!");
+                return;
+            }
+            
+            utils.toggleLoader(true, "Menyimpan data...");
+            const form = e.target;
+            
+            // PERBAIKAN: Kompresi Tanda Tangan ke format JPEG dengan Quality 50%
+            const signatureCanvas = document.getElementById('signature-pad');
+            const ctx = signatureCanvas.getContext('2d');
+            ctx.globalCompositeOperation = "destination-over";
+            ctx.fillStyle = "#ffffff";
+            ctx.fillRect(0, 0, signatureCanvas.width, signatureCanvas.height);
+            const signatureData = signatureCanvas.toDataURL('image/jpeg', 0.5); 
+            ctx.globalCompositeOperation = "source-over"; // kembalikan default
+            
+            const newGuest = {
+                // PERBAIKAN: UUID String Random
+                id: Date.now().toString() + '-' + Math.random().toString(36).substr(2, 9),
+                name: form.name.value.trim(),
+                agency: form.agency.value.trim(),
+                purpose: form.purpose.value.trim(),
+                phone: form.phone.value || "-",
+                date: utils.getTodayDate(),
+                time: utils.formatTime(),
+                signature: signatureData
+            };
+            
+            setTimeout(async () => {
+                await db.saveGuest(newGuest);
+                utils.toggleLoader(false);
+                utils.showToast("Berhasil terdaftar!");
+                router.navigate('dashboard');
+            }, 600);
+        }
+
+        function renderChart() {
+            const ctx = document.getElementById('visitChart');
+            if (!ctx) return;
+            
+            const today = utils.getTodayDate();
+            const todayGuests = state.guests.filter(g => g.date === today);
+
+            const startHour = 0;
+            const endHour = 23;
+            const labels = [];
+            const dataCounts = [];
+
+            for (let i = startHour; i <= endHour; i++) {
+                const hourStr = i.toString().padStart(2, '0') + ":00";
+                labels.push(hourStr);
+                dataCounts.push(0);
+            }
+
+            todayGuests.forEach(g => {
+                if (g.time) {
+                    const hour = parseInt(g.time.split(':')[0]);
+                    if (hour >= startHour && hour <= endHour) {
+                        const index = hour - startHour;
+                        dataCounts[index]++;
+                    }
+                }
+            });
+
+            const gradient = ctx.getContext('2d').createLinearGradient(0, 0, 0, 400);
+            gradient.addColorStop(0, 'rgba(79, 70, 229, 0.6)'); 
+            gradient.addColorStop(1, 'rgba(79, 70, 229, 0.05)');
+
+            if (state.chartInstance) state.chartInstance.destroy();
+            
+            state.chartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{ 
+                        label: 'Kunjungan',
+                        data: dataCounts, 
+                        borderColor: '#4f46e5', 
+                        borderWidth: 3,
+                        backgroundColor: gradient,
+                        fill: true,
+                        tension: 0.4, 
+                        pointRadius: 4,
+                        pointBackgroundColor: '#ffffff',
+                        pointBorderColor: '#4f46e5',
+                        pointBorderWidth: 2,
+                        pointHoverRadius: 6,
+                        pointHoverBackgroundColor: '#4f46e5',
+                        pointHoverBorderColor: '#ffffff'
+                    }]
+                },
+                options: { 
+                    responsive: true, 
+                    maintainAspectRatio: false, 
+                    plugins: { 
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: 'rgba(15, 23, 42, 0.9)', 
+                            titleColor: '#f8fafc',
+                            bodyColor: '#f8fafc',
+                            padding: 12,
+                            cornerRadius: 8,
+                            displayColors: false,
+                            callbacks: {
+                                title: (items) => `Pukul ${items[0].label}`,
+                                label: (context) => `${context.raw} Tamu`
+                            }
+                        }
+                    }, 
+                    scales: { 
+                        y: { 
+                            beginAtZero: true, 
+                            grid: { 
+                                borderDash: [5, 5], 
+                                color: '#f1f5f9',
+                                drawBorder: false 
+                            }, 
+                            ticks: { 
+                                stepSize: 1, 
+                                font: { size: 11, family: "'Inter', sans-serif" },
+                                color: '#64748b',
+                                precision: 0
+                            },
+                            suggestedMax: 5
+                        }, 
+                        x: { 
+                            grid: { display: false }, 
+                            ticks: { 
+                                font: { size: 11, family: "'Inter', sans-serif" },
+                                color: '#64748b',
+                                maxRotation: 0
+                            } 
+                        } 
+                    },
+                    interaction: {
+                        intersect: false,
+                        mode: 'index',
+                    },
+                }
+            });
+        }
+
+        // ============================================
+        // SERVICE WORKER REGISTRATION (TRUE OFFLINE)
+        // ============================================
+        function registerServiceWorker() {
+            if ('serviceWorker' in navigator) {
+                const swCode = `
+                    const CACHE_NAME = 'etamu-cache-v1';
+                    const urlsToCache = [ location.origin + location.pathname ];
+                    
+                    self.addEventListener('install', event => {
+                        event.waitUntil(
+                            caches.open(CACHE_NAME).then(cache => cache.addAll(urlsToCache))
+                        );
+                    });
+                    
+                    self.addEventListener('fetch', event => {
+                        event.respondWith(
+                            caches.match(event.request).then(response => {
+                                return response || fetch(event.request);
+                            }).catch(() => {
+                                return caches.match(location.origin + location.pathname);
+                            })
+                        );
+                    });
+                `;
+                const blob = new Blob([swCode], { type: 'application/javascript' });
+                const swUrl = URL.createObjectURL(blob);
+
+                navigator.serviceWorker.register(swUrl).then(reg => {
+                    console.log('Service Worker Terdaftar untuk Offline Mode');
+                }).catch(err => console.error('Service Worker Gagal:', err));
+            }
+        }
+
+        function androidDownload(blob, filename) {
+            const reader = new FileReader();
+            reader.onloadend = function () {
+                const base64data = reader.result;
+                const link = document.createElement('a');
+                link.href = base64data;
+                link.download = filename;
+                link.target = '_blank';
+                document.body.appendChild(link);
+                link.click();
+                setTimeout(() => {
+                    document.body.removeChild(link);
+                }, 300);
+            };
+            reader.readAsDataURL(blob);
+        }
+
+        // ============================================
+        // INITIALIZATION
+        // ============================================
+        window.onresize = () => {
+            if(state.view === 'form') sigPad.init();
+        };
+
+        window.onload = () => {
+            sheetsSync.init();
+            pwaManager.init(); 
+            registerServiceWorker(); 
+            
+            const currentHash = window.location.hash.substring(1);
+            router._render(currentHash || 'dashboard');
+        };
+    </script>
+</body>
+</html>
