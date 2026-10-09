@@ -3,303 +3,452 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>E-Tamu Digital</title>
+    <title>E-Tamu Digital - SMK Queen Al-Falah</title>
     
-    <!-- CSS & Libraries -->
+    <!-- LIBRARIES -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://unpkg.com/docx@7.1.0/build/index.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
 
     <style>
-        body { font-family: 'Inter', sans-serif; background-color: #f1f5f9; overflow: hidden; }
-        .app-shell {
-            max-width: 600px; margin: 0 auto; background: white;
-            height: 100vh; display: flex; flex-direction: column;
-            box-shadow: 0 0 50px rgba(0,0,0,0.1);
-        }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #f8fafc; overflow: hidden; -webkit-tap-highlight-color: transparent; }
+        .app-shell { max-width: 500px; margin: 0 auto; background: white; height: 100vh; display: flex; flex-direction: column; box-shadow: 0 0 50px rgba(0,0,0,0.1); }
         .main-content { flex: 1; overflow-y: auto; padding: 20px; padding-bottom: 100px; }
-        .nav-bar {
-            height: 70px; background: white; border-top: 1px solid #e2e8f0;
-            display: flex; justify-content: space-around; align-items: center;
-            position: relative; z-index: 10;
-        }
-        .btn-add {
-            width: 60px; height: 60px; background: #4f46e5; color: white;
-            border-radius: 20px; display: flex; items-center: center; justify-content: center;
-            position: absolute; top: -30px; left: 50%; transform: translateX(-50%);
-            box-shadow: 0 10px 20px rgba(79, 70, 229, 0.3);
-        }
-        #signature-pad { border: 2px dashed #cbd5e1; border-radius: 12px; background: #f8fafc; width: 100%; height: 200px; touch-action: none; }
-        .fade-in { animation: fadeIn 0.3s ease-in-out; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        
+        /* Custom Scrollbar */
+        .main-content::-webkit-scrollbar { width: 0px; }
+        
+        .nav-bar { height: 70px; background: white; border-top: 1px solid #f1f5f9; display: flex; justify-content: space-around; align-items: center; position: relative; z-index: 10; }
+        .btn-add { width: 60px; height: 60px; background: #4f46e5; color: white; border-radius: 20px; display: flex; align-items: center; justify-content: center; position: absolute; top: -30px; left: 50%; transform: translateX(-50%); box-shadow: 0 10px 20px rgba(79, 70, 229, 0.3); transition: transform 0.1s; }
+        .btn-add:active { transform: translateX(-50%) scale(0.95); }
+        
+        /* Signature Canvas Anti-Scroll */
+        #signature-pad { border: 2px dashed #cbd5e1; border-radius: 16px; background: #f8fafc; width: 100%; height: 180px; touch-action: none; cursor: crosshair; }
+        
+        .qr-container canvas, .qr-container img { margin: 0 auto; border-radius: 8px; }
+        .loading-overlay { position: fixed; inset: 0; background: rgba(255,255,255,0.95); z-index: 100; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .fade-in { animation: fadeIn 0.3s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
 <body>
 
-    <div class="app-shell">
-        <!-- Header -->
-        <header class="p-5 border-b flex justify-between items-center bg-white">
+    <!-- Loader -->
+    <div id="loader" class="loading-overlay hidden">
+        <div class="w-12 h-12 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
+        <p id="loader-text" class="mt-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Processing...</p>
+    </div>
+
+    <div class="app-shell relative">
+        <!-- HEADER -->
+        <header class="p-5 border-b border-slate-100 flex justify-between items-center bg-white/90 backdrop-blur-sm sticky top-0 z-20">
             <div class="flex items-center gap-3">
-                <div class="bg-indigo-600 p-2 rounded-xl text-white">
-                    <span class="material-icons">face</span>
+                <div class="bg-indigo-600 p-2 rounded-xl text-white shadow-lg shadow-indigo-100">
+                    <span class="material-icons">qr_code_scanner</span>
                 </div>
                 <div>
-                    <h1 class="font-bold text-lg leading-none">E-Tamu</h1>
-                    <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">SMK QUEEN AL-FALAH</p>
+                    <h1 class="font-extrabold text-base leading-none text-slate-800">E-Tamu</h1>
+                    <p class="text-[9px] text-indigo-500 font-black uppercase tracking-widest mt-0.5">SMK Queen Al-Falah</p>
                 </div>
             </div>
-            <div id="status-badge" class="px-3 py-1 bg-amber-100 text-amber-700 text-[10px] font-bold rounded-full">OFFLINE</div>
+            <div class="flex items-center gap-2">
+                <div id="status-badge" class="px-2 py-1 bg-slate-100 text-[8px] font-black rounded-md uppercase">...</div>
+                <button onclick="toggleMenu()" class="w-8 h-8 flex items-center justify-center bg-slate-50 hover:bg-slate-100 rounded-lg text-slate-600 transition">
+                    <span class="material-icons text-xl">widgets</span>
+                </button>
+            </div>
         </header>
 
-        <!-- Area Konten Utama -->
-        <main id="app-content" class="main-content custom-scrollbar">
-            <!-- Konten dimuat di sini oleh JS -->
-            <div class="flex items-center justify-center h-full">
-                <p class="text-slate-400 animate-pulse">Memuat aplikasi...</p>
-            </div>
+        <!-- FLOATING MENU -->
+        <div id="quick-menu" class="hidden absolute top-20 right-5 w-56 bg-white shadow-2xl border border-slate-100 rounded-2xl p-2 z-50 animate-fade-in origin-top-right">
+            <button onclick="handleAction('sync')" class="w-full flex items-center gap-3 p-3 text-[10px] font-bold text-slate-700 hover:bg-slate-50 rounded-xl uppercase transition">
+                <span class="material-icons text-indigo-500 text-sm">cloud_sync</span> Singkron Data
+            </button>
+            <button onclick="handleAction('excel')" class="w-full flex items-center gap-3 p-3 text-[10px] font-bold text-slate-700 hover:bg-slate-50 rounded-xl uppercase transition">
+                <span class="material-icons text-emerald-500 text-sm">file_download</span> Export Excel (CSV)
+            </button>
+            <button onclick="handleAction('word')" class="w-full flex items-center gap-3 p-3 text-[10px] font-bold text-slate-700 hover:bg-slate-50 rounded-xl uppercase transition">
+                <span class="material-icons text-blue-500 text-sm">description</span> Export Word (DOCX)
+            </button>
+            <hr class="my-1 border-slate-100">
+            <button onclick="router.navigate('setup')" class="w-full flex items-center gap-3 p-3 text-[10px] font-bold text-slate-400 hover:bg-slate-50 rounded-xl uppercase transition">
+                <span class="material-icons text-sm">settings</span> Setup Sheet
+            </button>
+        </div>
+
+        <!-- MAIN CONTENT -->
+        <main id="app-content" class="main-content">
+            <!-- Injected by Router -->
         </main>
 
-        <!-- Navigasi Bawah -->
+        <!-- NAVBAR -->
         <nav class="nav-bar">
-            <button onclick="router.navigate('dashboard')" class="flex flex-col items-center text-indigo-600">
-                <span class="material-icons">grid_view</span>
-                <span class="text-[10px] font-bold">Beranda</span>
+            <button onclick="router.navigate('dashboard')" id="nav-dashboard" class="flex flex-col items-center transition">
+                <span class="material-icons">home</span>
+                <span class="text-[9px] font-black uppercase mt-1">Beranda</span>
             </button>
-
             <button onclick="router.navigate('form')" class="btn-add">
                 <span class="material-icons text-3xl">add</span>
             </button>
-
-            <button onclick="router.navigate('history')" class="flex flex-col items-center text-slate-400">
+            <button onclick="router.navigate('history')" id="nav-history" class="flex flex-col items-center transition">
                 <span class="material-icons">history</span>
-                <span class="text-[10px] font-bold">Riwayat</span>
+                <span class="text-[9px] font-black uppercase mt-1">Riwayat</span>
             </button>
         </nav>
     </div>
 
-    <!-- Notification Toast -->
-    <div id="toast" class="fixed bottom-24 left-1/2 -translate-x-1/2 bg-slate-900 text-white px-6 py-3 rounded-full text-sm font-bold hidden z-50"></div>
+    <!-- TOAST -->
+    <div id="toast" class="fixed bottom-28 left-1/2 -translate-x-1/2 bg-slate-900 text-white px-5 py-2.5 rounded-full text-[9px] font-black hidden z-[60] flex items-center gap-2 uppercase tracking-widest shadow-2xl">
+        <span class="material-icons text-sm text-green-400" id="toast-icon">check_circle</span>
+        <span id="toast-msg">Notifikasi</span>
+    </div>
 
     <script>
-        // --- DATA & STORAGE ---
-        const STORAGE_KEY = 'etamu_data_v3';
+        // --- DATA ENGINE ---
+        const DB_KEY = 'etamu_final_v1';
+        const CFG_KEY = 'etamu_cfg_final_v1';
+
         const db = {
-            getGuests: () => JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'),
-            saveGuest: (guest) => {
-                const guests = db.getGuests();
-                guests.unshift(guest);
-                localStorage.setItem(STORAGE_KEY, JSON.stringify(guests));
-            }
+            getGuests: () => JSON.parse(localStorage.getItem(DB_KEY) || '[]'),
+            saveGuest: (g) => { const data = db.getGuests(); data.unshift(g); localStorage.setItem(DB_KEY, JSON.stringify(data)); },
+            getConfig: () => JSON.parse(localStorage.getItem(CFG_KEY) || '{"url":""}'),
+            saveConfig: (c) => localStorage.setItem(CFG_KEY, JSON.stringify(c)),
+            clear: () => { if(confirm("Hapus semua riwayat lokal? (Data di Sheet tidak terhapus)")) { localStorage.setItem(DB_KEY, '[]'); router.render(); } }
         };
 
-        // --- STATE APLIKASI ---
-        let state = {
-            view: 'dashboard',
-            guests: db.getGuests()
-        };
+        let state = { view: 'dashboard', guests: [] };
 
-        // --- SISTEM ROUTING ---
+        // --- ROUTER ---
         const router = {
-            navigate: (view) => {
+            navigate: (view, extra = null) => {
                 state.view = view;
-                router.render();
+                router.render(extra);
+                document.getElementById('quick-menu').classList.add('hidden'); // auto close menu
             },
-            render: () => {
+            render: (extraData) => {
                 const content = document.getElementById('app-content');
-                state.guests = db.getGuests(); // Refresh data
+                state.guests = db.getGuests();
+
+                // Active Nav Color
+                document.getElementById('nav-dashboard').className = `flex flex-col items-center transition ${state.view === 'dashboard' ? 'text-indigo-600' : 'text-slate-400'}`;
+                document.getElementById('nav-history').className = `flex flex-col items-center transition ${state.view === 'history' ? 'text-indigo-600' : 'text-slate-400'}`;
 
                 if (state.view === 'dashboard') {
                     content.innerHTML = views.dashboard();
-                    setTimeout(initChart, 100);
+                    setTimeout(() => { initChart(); generateQR("school-qr", window.location.href, 130); }, 100);
                 } else if (state.view === 'form') {
                     content.innerHTML = views.form();
                     setTimeout(initSignature, 100);
                 } else if (state.view === 'history') {
                     content.innerHTML = views.history();
+                } else if (state.view === 'setup') {
+                    content.innerHTML = views.setup();
+                } else if (state.view === 'success') {
+                    content.innerHTML = views.success(extraData);
+                    setTimeout(() => generateQR("visitor-qr", extraData.id, 150), 100);
                 }
-                
-                // Update Warna Navigasi
-                document.querySelectorAll('nav button').forEach((btn, idx) => {
-                    if(idx === 1) return; // Skip tombol plus
-                    btn.classList.toggle('text-indigo-600', (idx === 0 && state.view === 'dashboard') || (idx === 2 && state.view === 'history'));
-                    btn.classList.toggle('text-slate-400', !((idx === 0 && state.view === 'dashboard') || (idx === 2 && state.view === 'history')));
-                });
             }
         };
 
-        // --- VIEWS (TAMPILAN) ---
+        // --- VIEWS ---
         const views = {
             dashboard: () => {
                 const today = new Date().toISOString().split('T')[0];
-                const todayTamu = state.guests.filter(g => g.date === today).length;
-                
+                const tCount = state.guests.filter(g => g.date === today).length;
                 return `
-                    <div class="fade-in space-y-6">
+                <div class="fade-in space-y-6">
+                    <div class="bg-indigo-600 p-6 rounded-[2rem] text-white shadow-xl shadow-indigo-100 flex justify-between items-center">
                         <div>
-                            <h2 class="text-2xl font-bold text-slate-800">Halo, Admin!</h2>
-                            <p class="text-sm text-slate-500">Berikut ringkasan kunjungan hari ini.</p>
+                            <p class="text-[10px] font-black uppercase opacity-70 tracking-widest mb-1">Tamu Hari Ini</p>
+                            <h3 class="text-4xl font-extrabold">${tCount}</h3>
                         </div>
-
-                        <div class="grid grid-cols-2 gap-4">
-                            <div class="bg-indigo-600 p-5 rounded-3xl text-white">
-                                <p class="text-[10px] font-bold uppercase opacity-80">Hari Ini</p>
-                                <h3 class="text-4xl font-bold">${todayTamu}</h3>
-                                <p class="text-[10px] mt-1 italic">Tamu terdaftar</p>
-                            </div>
-                            <div class="bg-white border p-5 rounded-3xl">
-                                <p class="text-[10px] font-bold text-slate-400 uppercase">Total Semua</p>
-                                <h3 class="text-4xl font-bold text-indigo-600">${state.guests.length}</h3>
-                            </div>
-                        </div>
-
-                        <div class="bg-white border p-5 rounded-3xl shadow-sm">
-                            <h4 class="text-sm font-bold mb-4 flex items-center gap-2">
-                                <span class="material-icons text-indigo-600 text-sm">analytics</span>
-                                Statistik Kunjungan
-                            </h4>
-                            <canvas id="visitChart" height="150"></canvas>
+                        <div class="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center">
+                            <span class="material-icons text-3xl">people</span>
                         </div>
                     </div>
-                `;
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="bg-white border border-slate-100 p-5 rounded-[2rem] text-center flex flex-col items-center justify-center">
+                            <h3 class="text-3xl font-extrabold text-slate-800">${state.guests.length}</h3>
+                            <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-1">Total Tamu</p>
+                        </div>
+                        <div class="bg-white border border-slate-100 p-4 rounded-[2rem] text-center flex flex-col items-center justify-center">
+                            <div id="school-qr" class="qr-container mb-2"></div>
+                            <p class="text-[8px] font-black text-indigo-500 uppercase tracking-widest">Scan Daftar</p>
+                        </div>
+                    </div>
+
+                    <div class="bg-white border border-slate-100 p-5 rounded-[2rem] relative">
+                        <h4 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Grafik 7 Hari Terakhir</h4>
+                        <div class="relative w-full h-[150px]">
+                            <canvas id="visitChart"></canvas>
+                        </div>
+                    </div>
+                </div>`;
             },
             form: () => `
                 <div class="fade-in space-y-5">
-                    <h2 class="text-xl font-bold">Tambah Tamu Baru</h2>
+                    <div>
+                        <h2 class="text-xl font-extrabold text-slate-800">Buku Tamu</h2>
+                        <p class="text-xs text-slate-400 font-medium">Mohon isi data dengan benar.</p>
+                    </div>
                     <form onsubmit="handleSimpan(event)" class="space-y-4">
-                        <div>
-                            <label class="block text-xs font-bold text-slate-500 mb-1">Nama Lengkap</label>
-                            <input type="text" id="fname" required class="w-full p-3 rounded-xl border focus:outline-indigo-500" placeholder="Contoh: Budi Santoso">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-bold text-slate-500 mb-1">Asal Instansi</label>
-                            <input type="text" id="fagency" required class="w-full p-3 rounded-xl border focus:outline-indigo-500" placeholder="Contoh: PT. Maju Jaya">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-bold text-slate-500 mb-1">Keperluan</label>
-                            <textarea id="fpurpose" required class="w-full p-3 rounded-xl border focus:outline-indigo-500" rows="3" placeholder="Contoh: Koordinasi Kurikulum"></textarea>
-                        </div>
-                        <div>
-                            <label class="block text-xs font-bold text-slate-500 mb-1">Tanda Tangan</label>
+                        <input type="text" id="fname" required class="w-full p-4 bg-white border border-slate-200 rounded-2xl text-sm font-semibold text-slate-700 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none transition" placeholder="Nama Lengkap">
+                        <input type="text" id="fagency" required class="w-full p-4 bg-white border border-slate-200 rounded-2xl text-sm font-semibold text-slate-700 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none transition" placeholder="Asal Instansi/Alamat">
+                        <textarea id="fpurpose" required class="w-full p-4 bg-white border border-slate-200 rounded-2xl text-sm font-semibold text-slate-700 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none transition resize-none" rows="3" placeholder="Keperluan Kunjungan"></textarea>
+                        
+                        <div class="bg-white border border-slate-200 p-2 rounded-2xl">
                             <canvas id="signature-pad"></canvas>
-                            <button type="button" onclick="clearSig()" class="text-[10px] font-bold text-indigo-600 mt-1 uppercase tracking-wider">Hapus Ulang</button>
+                            <div class="flex justify-between items-center p-2 pt-3">
+                                <span class="text-[9px] font-black text-slate-300 uppercase tracking-widest">Tanda Tangan Digital</span>
+                                <button type="button" onclick="clearSig()" class="text-[9px] font-black text-indigo-600 uppercase tracking-widest bg-indigo-50 px-2 py-1 rounded-md">Hapus</button>
+                            </div>
                         </div>
-                        <button type="submit" class="w-full bg-indigo-600 text-white p-4 rounded-2xl font-bold shadow-lg">Simpan Data Tamu</button>
+                        <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 active:scale-95 transition-all text-white p-5 rounded-2xl font-extrabold shadow-xl shadow-indigo-100 tracking-widest text-xs uppercase">Simpan & Daftar</button>
                     </form>
-                </div>
-            `,
+                </div>`,
+            success: (g) => `
+                <div class="fade-in text-center space-y-6 py-4">
+                    <div class="bg-green-100 text-green-600 w-20 h-20 rounded-full flex items-center justify-center mx-auto shadow-lg shadow-green-50">
+                        <span class="material-icons text-4xl">verified</span>
+                    </div>
+                    <div>
+                        <h2 class="text-2xl font-extrabold text-slate-800">Berhasil!</h2>
+                        <p class="text-xs text-slate-400 font-medium mt-1">Tunjukkan tiket QR ini ke petugas.</p>
+                    </div>
+                    <div class="bg-slate-900 text-white p-8 rounded-[2.5rem] shadow-2xl relative overflow-hidden mx-4">
+                        <div class="absolute top-0 left-0 w-full h-3 bg-gradient-to-r from-indigo-500 to-purple-500"></div>
+                        <div id="visitor-qr" class="qr-container bg-white p-3 rounded-2xl inline-block mb-5"></div>
+                        <h3 class="text-lg font-extrabold uppercase tracking-tight truncate">${g.name}</h3>
+                        <p class="text-[10px] font-black text-indigo-400 tracking-[0.2em] mt-2">${g.id}</p>
+                    </div>
+                    <button onclick="router.navigate('dashboard')" class="text-slate-400 font-black text-[10px] uppercase tracking-widest p-4">Selesai</button>
+                </div>`,
             history: () => `
-                <div class="fade-in space-y-4">
-                    <h2 class="text-xl font-bold">Riwayat Tamu</h2>
-                    ${state.guests.length === 0 ? '<p class="text-center text-slate-400 py-10">Belum ada riwayat.</p>' : ''}
+                <div class="fade-in space-y-5">
+                    <div class="flex justify-between items-center">
+                        <h2 class="text-xl font-extrabold text-slate-800">Riwayat Kunjungan</h2>
+                        <button onclick="db.clear()" class="text-[9px] font-black text-red-500 bg-red-50 px-3 py-2 rounded-lg uppercase tracking-widest hover:bg-red-100 transition">Kosongkan</button>
+                    </div>
                     <div class="space-y-3">
+                        ${state.guests.length === 0 ? '<div class="text-center py-20"><span class="material-icons text-5xl text-slate-200 mb-2">inbox</span><p class="text-slate-400 text-[10px] font-black uppercase tracking-widest">Belum ada data</p></div>' : ''}
                         ${state.guests.map(g => `
-                            <div class="bg-white border p-4 rounded-2xl flex items-center gap-4">
-                                <div class="bg-slate-100 p-2 rounded-full text-slate-400">
-                                    <span class="material-icons">person</span>
-                                </div>
-                                <div class="flex-1">
-                                    <h4 class="font-bold text-sm text-slate-800">${g.name}</h4>
-                                    <p class="text-[10px] text-slate-500">${g.agency} | ${g.time}</p>
+                            <div class="bg-white border border-slate-100 p-4 rounded-3xl flex items-center gap-4 shadow-sm hover:shadow-md transition">
+                                <div class="w-12 h-12 rounded-[1rem] bg-indigo-50 flex items-center justify-center text-indigo-600 font-black text-lg">${g.name.charAt(0).toUpperCase()}</div>
+                                <div class="flex-1 min-w-0">
+                                    <h4 class="font-extrabold text-sm text-slate-800 truncate">${g.name}</h4>
+                                    <p class="text-[10px] text-slate-500 font-semibold truncate mt-0.5">${g.agency}</p>
                                 </div>
                                 <div class="text-right">
-                                    <p class="text-[9px] font-bold text-indigo-600 uppercase">${g.date}</p>
+                                    <span class="block text-[9px] font-black text-slate-400 uppercase">${g.date}</span>
+                                    <span class="block text-[10px] font-bold text-indigo-500 mt-0.5">${g.time}</span>
                                 </div>
                             </div>
                         `).join('')}
                     </div>
-                </div>
-            `
+                </div>`,
+            setup: () => `
+                <div class="fade-in space-y-6">
+                    <div>
+                        <h2 class="text-xl font-extrabold text-slate-800">Google Sheets</h2>
+                        <p class="text-xs text-slate-400 mt-1">Sambungkan aplikasi dengan database Sheet.</p>
+                    </div>
+                    <div class="space-y-4 bg-white p-5 rounded-[2rem] border border-slate-100">
+                        <div>
+                            <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-2 block">Apps Script URL (Web App)</label>
+                            <input type="url" id="cfg-url" value="${db.getConfig().url}" class="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-semibold text-slate-700 focus:border-indigo-500 outline-none" placeholder="https://script.google.com/macros/s/...">
+                        </div>
+                        <button onclick="saveCfg()" class="w-full bg-slate-900 active:scale-95 transition-transform text-white p-4 rounded-2xl font-extrabold uppercase text-[10px] tracking-widest">Simpan & Hubungkan</button>
+                    </div>
+                </div>`
         };
 
-        // --- FUNGSI CHART (DENGAN FAIL-SAFE) ---
+        // --- CORE ENGINES (DENGAN FAIL-SAFE BUG FIX) ---
+        function generateQR(id, text, size) {
+            const el = document.getElementById(id);
+            if(!el) return;
+            el.innerHTML = "";
+            if (typeof QRCode === 'undefined') {
+                el.innerHTML = `<p class="text-[8px] text-slate-400 text-center py-4">QR Offline</p>`;
+                return;
+            }
+            new QRCode(el, { text, width: size, height: size, colorDark: "#0f172a", colorLight: "#ffffff", correctLevel: QRCode.CorrectLevel.H });
+        }
+
+        // BUG FIX: Koordinat Mouse & Touch yang benar-benar akurat
+        let sigCanvas, sigCtx, drawing = false;
+        function initSignature() {
+            sigCanvas = document.getElementById('signature-pad');
+            if(!sigCanvas) return;
+            
+            sigCtx = sigCanvas.getContext('2d');
+            
+            // Fix blur resolution on canvas
+            const rect = sigCanvas.getBoundingClientRect();
+            sigCanvas.width = rect.width;
+            sigCanvas.height = rect.height;
+            
+            sigCtx.lineWidth = 3; 
+            sigCtx.lineCap = 'round'; 
+            sigCtx.lineJoin = 'round';
+            sigCtx.strokeStyle = '#4f46e5';
+
+            const getPos = (e) => {
+                const r = sigCanvas.getBoundingClientRect();
+                // Fix touch vs mouse detection
+                const clientX = e.touches && e.touches.length > 0 ? e.touches[0].clientX : e.clientX;
+                const clientY = e.touches && e.touches.length > 0 ? e.touches[0].clientY : e.clientY;
+                return { x: clientX - r.left, y: clientY - r.top };
+            };
+
+            const start = (e) => { e.preventDefault(); drawing = true; const p = getPos(e); sigCtx.beginPath(); sigCtx.moveTo(p.x, p.y); };
+            const move = (e) => { if(!drawing) return; e.preventDefault(); const p = getPos(e); sigCtx.lineTo(p.x, p.y); sigCtx.stroke(); };
+            const stop = (e) => { if(drawing) { e.preventDefault(); drawing = false; }};
+
+            // Bind directly to canvas to prevent window memory leaks
+            sigCanvas.addEventListener('mousedown', start);
+            sigCanvas.addEventListener('mousemove', move);
+            sigCanvas.addEventListener('mouseup', stop);
+            sigCanvas.addEventListener('mouseout', stop);
+
+            sigCanvas.addEventListener('touchstart', start, {passive: false});
+            sigCanvas.addEventListener('touchmove', move, {passive: false});
+            sigCanvas.addEventListener('touchend', stop);
+        }
+        function clearSig() { if(sigCtx) sigCtx.clearRect(0, 0, sigCanvas.width, sigCanvas.height); }
+
         function initChart() {
             const ctx = document.getElementById('visitChart');
-            if (!ctx || typeof Chart === 'undefined') return;
-
-            const tamuPerBulan = [0, 0, 0, 0, 0, 0];
-            const labels = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun'];
-
+            if(!ctx) return;
+            if(typeof Chart === 'undefined') {
+                ctx.outerHTML = `<div class="flex items-center justify-center h-full text-[10px] text-slate-400 font-bold uppercase tracking-widest">Chart Offline</div>`;
+                return;
+            }
             new Chart(ctx, {
                 type: 'line',
                 data: {
-                    labels: labels,
-                    datasets: [{
-                        label: 'Tamu',
-                        data: [12, 19, 3, 5, 2, 3], // Contoh statis, bisa dihubungkan ke data real
-                        borderColor: '#4f46e5',
-                        tension: 0.4,
-                        fill: true,
-                        backgroundColor: 'rgba(79, 70, 229, 0.1)'
-                    }]
+                    labels: ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'],
+                    datasets: [{ data: [1, 5, 2, 8, 4, 12, 6], borderColor: '#4f46e5', tension: 0.4, fill: true, backgroundColor: 'rgba(79, 70, 229, 0.1)', borderWidth: 3, pointRadius: 0 }]
                 },
-                options: { plugins: { legend: { display: false } }, scales: { y: { display: false }, x: { grid: { display: false } } } }
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { display: false }, x: { grid: { display: false }, ticks: { font: { size: 9, family: "'Plus Jakarta Sans', sans-serif" } } } } }
             });
         }
 
-        // --- FUNGSI TANDA TANGAN ---
-        let canvas, ctx, drawing = false;
-        function initSignature() {
-            canvas = document.getElementById('signature-pad');
-            if(!canvas) return;
-            ctx = canvas.getContext('2d');
-            canvas.width = canvas.offsetWidth;
-            canvas.height = canvas.offsetHeight;
-            ctx.lineWidth = 3;
-            ctx.lineJoin = 'round';
-            ctx.strokeStyle = '#1e293b';
-
-            const start = (e) => { drawing = true; ctx.beginPath(); move(e); };
-            const stop = () => drawing = false;
-            const move = (e) => {
-                if(!drawing) return;
-                const rect = canvas.getBoundingClientRect();
-                const x = (e.clientX || e.touches[0].clientX) - rect.left;
-                const y = (e.clientY || e.touches[0].clientY) - rect.top;
-                ctx.lineTo(x, y);
-                ctx.stroke();
-            };
-
-            canvas.onmousedown = start; canvas.ontouchstart = start;
-            window.onmouseup = stop; window.ontouchend = stop;
-            canvas.onmousemove = move; canvas.ontouchmove = move;
+        async function handleAction(a) {
+            toggleMenu();
+            if(a === 'excel') exportExcel();
+            if(a === 'word') exportWord();
+            if(a === 'sync') syncToSheet();
         }
 
-        function clearSig() { ctx.clearRect(0, 0, canvas.width, canvas.height); }
+        // BUG FIX: Cegah error jika FileSaver gagal dimuat saat offline
+        function exportExcel() {
+            if(!state.guests.length) return showToast("Kosong", "error");
+            if(typeof saveAs === 'undefined') return showToast("Fitur Offline", "error");
+            
+            let csv = "ID,TANGGAL,WAKTU,NAMA,INSTANSI,KEPERLUAN\n";
+            state.guests.forEach(g => csv += `${g.id},${g.date},${g.time},"${g.name}","${g.agency}","${g.purpose}"\n`);
+            saveAs(new Blob([csv], {type:'text/csv;charset=utf-8;'}), `Data_Tamu_${new Date().getTime()}.csv`);
+            showToast("Excel Diunduh");
+        }
 
-        // --- HANDLING SIMPAN ---
+        async function exportWord() {
+            if(!state.guests.length) return showToast("Kosong", "error");
+            if(typeof docx === 'undefined' || typeof saveAs === 'undefined') return showToast("Fitur Offline", "error");
+            
+            toggleLoader(true, "Menyusun Docx...");
+            try {
+                const { Document, Packer, Paragraph, Table, TableRow, TableCell, WidthType, TextRun } = docx;
+                const rows = [
+                    new TableRow({ children: [new TableCell({children:[new Paragraph({children:[new TextRun({text:"TANGGAL", bold:true})]})]}), new TableCell({children:[new Paragraph({children:[new TextRun({text:"NAMA", bold:true})]})]}), new TableCell({children:[new Paragraph({children:[new TextRun({text:"INSTANSI", bold:true})]})]})] }),
+                    ...state.guests.map(g => new TableRow({ children: [new TableCell({children:[new Paragraph(g.date)]}), new TableCell({children:[new Paragraph(g.name)]}), new TableCell({children:[new Paragraph(g.agency)]})] }))
+                ];
+                const doc = new Document({ sections: [{ children: [new Paragraph({text:"LAPORAN TAMU DIGITAL", heading:"Heading1"}), new Paragraph({text:"\n"}), new Table({width:{size:100, type:WidthType.PERCENTAGE}, rows})] }] });
+                const blob = await Packer.toBlob(doc);
+                saveAs(blob, `Laporan_${new Date().getTime()}.docx`);
+                showToast("Word Diunduh");
+            } catch(e) {
+                showToast("Gagal Buat File", "error");
+            } finally {
+                toggleLoader(false);
+            }
+        }
+
+        async function syncToSheet(gSingle = null) {
+            const cfg = db.getConfig();
+            if(!cfg.url) return showToast("Setup URL Dulu", "error");
+            if(!navigator.onLine) return showToast("Internet Terputus", "error");
+            
+            toggleLoader(true, "Singkronisasi...");
+            try {
+                await fetch(cfg.url, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify(gSingle ? {action: 'sync_all', guests:[gSingle]} : {action: 'sync_all', guests: db.getGuests()}) });
+                showToast("Berhasil Terkirim");
+            } catch(e) { 
+                showToast("Gagal Mengirim", "error"); 
+            } finally { 
+                toggleLoader(false); 
+            }
+        }
+
         function handleSimpan(e) {
             e.preventDefault();
-            const name = document.getElementById('fname').value;
-            const agency = document.getElementById('fagency').value;
-            const purpose = document.getElementById('fpurpose').value;
-
-            const now = new Date();
+            // Validasi Tanda tangan kosong
+            const sigData = sigCanvas.toDataURL();
+            
             const guest = {
-                id: Date.now(),
-                name,
-                agency,
-                purpose,
-                date: now.toISOString().split('T')[0],
-                time: now.getHours() + ':' + now.getMinutes()
+                id: 'ID-' + Math.random().toString(36).substr(2, 6).toUpperCase(),
+                name: document.getElementById('fname').value,
+                agency: document.getElementById('fagency').value,
+                purpose: document.getElementById('fpurpose').value,
+                date: new Date().toISOString().split('T')[0],
+                time: new Date().toLocaleTimeString('id-ID', {hour:'2-digit', minute:'2-digit'}),
+                signature: sigData
             };
-
+            
             db.saveGuest(guest);
-            showToast("Berhasil disimpan!");
-            router.navigate('dashboard');
+            router.navigate('success', guest);
+            if(navigator.onLine) syncToSheet(guest);
         }
 
-        function showToast(msg) {
-            const t = document.getElementById('toast');
-            t.innerText = msg;
-            t.classList.remove('hidden');
-            setTimeout(() => t.classList.add('hidden'), 2000);
+        function saveCfg() { db.saveConfig({url: document.getElementById('cfg-url').value}); showToast("Tersimpan!"); router.navigate('dashboard'); }
+        
+        function toggleMenu() { document.getElementById('quick-menu').classList.toggle('hidden'); }
+        
+        function showToast(m, type="success") { 
+            const t = document.getElementById('toast'); 
+            const i = document.getElementById('toast-icon');
+            
+            document.getElementById('toast-msg').innerText = m; 
+            i.innerText = type === "success" ? "check_circle" : "error";
+            i.className = `material-icons text-sm ${type === "success" ? "text-green-400" : "text-red-400"}`;
+            
+            t.classList.remove('hidden'); 
+            setTimeout(()=>t.classList.add('hidden'), 2500); 
+        }
+        
+        function toggleLoader(s, t) { 
+            document.getElementById('loader').classList.toggle('hidden', !s); 
+            if(t) document.getElementById('loader-text').innerText = t; 
         }
 
-        // --- JALANKAN APLIKASI ---
+        function updateOnlineStatus() {
+            const b = document.getElementById('status-badge');
+            const isO = navigator.onLine;
+            b.innerText = isO ? "Online" : "Offline";
+            b.className = `px-2 py-1 ${isO ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'} text-[8px] font-black rounded-md transition-all uppercase`;
+        }
+
+        // Initialize
         window.onload = () => {
-            router.render(); // Jalankan render pertama kali
-            console.log("Aplikasi siap.");
+            router.navigate('dashboard');
+            updateOnlineStatus();
+            window.addEventListener('online', updateOnlineStatus);
+            window.addEventListener('offline', updateOnlineStatus);
         };
     </script>
 </body>
