@@ -5,14 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>E-Tamu Digital - SMK Queen Al-Falah</title>
     
-    <!-- LIBRARIES DASAR -->
+    <!-- LIBRARIES -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://unpkg.com/docx@7.1.0/build/index.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     
-    <!-- LIBRARIES FIREBASE V8 COMPAT (Stabil untuk single HTML file) -->
+    <!-- FIREBASE -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
     
@@ -42,7 +42,7 @@
     <!-- LAYER LOADING -->
     <div id="loader" class="loading-overlay">
         <div class="w-12 h-12 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
-        <p id="loader-text" class="mt-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Menghubungkan Server...</p>
+        <p id="loader-text" class="mt-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Menyiapkan Sistem...</p>
     </div>
 
     <div class="app-shell relative" id="app-shell">
@@ -50,22 +50,23 @@
         <header class="p-5 border-b border-slate-100 flex justify-between items-center bg-white/90 backdrop-blur-sm sticky top-0 z-20">
             <div class="flex items-center gap-3">
                 <div class="bg-indigo-600 p-2 rounded-xl text-white shadow-lg shadow-indigo-100">
-                    <span class="material-icons">cloud</span>
+                    <span class="material-icons">qr_code_scanner</span>
                 </div>
                 <div>
                     <h1 class="font-extrabold text-base leading-none text-slate-800">E-Tamu</h1>
-                    <p class="text-[9px] text-indigo-500 font-black uppercase tracking-widest mt-0.5">Cloud Database</p>
+                    <p class="text-[9px] text-indigo-500 font-black uppercase tracking-widest mt-0.5">SMK Queen Al-Falah</p>
                 </div>
             </div>
             <div class="flex items-center gap-2">
                 <div id="status-badge" class="px-2 py-1 bg-slate-100 text-[8px] font-black rounded-md uppercase">...</div>
+                <!-- Tombol Menu Hanya untuk Admin -->
                 <button id="menu-btn" onclick="toggleMenu(event)" class="w-8 h-8 flex items-center justify-center bg-slate-50 hover:bg-slate-100 rounded-lg text-slate-600 transition">
                     <span class="material-icons text-xl pointer-events-none">widgets</span>
                 </button>
             </div>
         </header>
 
-        <!-- MENU GANTUNG -->
+        <!-- MENU GANTUNG ADMIN -->
         <div id="quick-menu" class="hidden absolute top-20 right-5 w-48 bg-white shadow-2xl border border-slate-100 rounded-2xl p-2 z-50 animate-fade-in origin-top-right">
             <button onclick="handleAction('excel')" class="w-full flex items-center gap-3 p-3 text-[10px] font-bold text-slate-700 hover:bg-slate-50 rounded-xl uppercase transition">
                 <span class="material-icons text-emerald-500 text-sm">file_download</span> Export Excel
@@ -79,13 +80,13 @@
             </button>
         </div>
 
-        <!-- RUANG KONTEN -->
+        <!-- RUANG KONTEN UTAMA -->
         <main id="app-content" class="main-content">
             <!-- Disuntik oleh Router -->
         </main>
 
-        <!-- NAVIGASI BAWAH -->
-        <nav class="nav-bar">
+        <!-- NAVIGASI BAWAH ADMIN -->
+        <nav class="nav-bar" id="main-nav">
             <button onclick="router.navigate('dashboard')" id="nav-dashboard" class="flex flex-col items-center transition">
                 <span class="material-icons">home</span>
                 <span class="text-[9px] font-black uppercase mt-1">Beranda</span>
@@ -108,10 +109,8 @@
 
     <script>
         // =========================================================
+        // SETUP FIREBASE DATABASE MILIK ANDA
         // =========================================================
-        // 1. SETUP FIREBASE DATABASE
-        // =========================================================
-        
         const firebaseConfig = {
             apiKey: "AIzaSyCoNcCneR5g19dTRY7zAZzL53fCeOvpsCg",
             authDomain: "e-tamu-smk-queen.firebaseapp.com",
@@ -120,30 +119,34 @@
             messagingSenderId: "948856871318",
             appId: "1:948856871318:web:7b5cad269762ced6f525b7"
         };
-        // =========================================================
-
-        // Inisialisasi Firebase
         firebase.initializeApp(firebaseConfig);
-        const db = firebase.firestore();
+        const dbFirestore = firebase.firestore();
 
-        // State Global Aplikasi
+        // =========================================================
+        // STATE & DETEKSI GUEST MODE
+        // =========================================================
         let state = { view: 'dashboard', guests: [] };
+        
+        // MENDETEKSI APAKAH INI DIBUKA DARI SCAN QR CODE
+        const urlParams = new URLSearchParams(window.location.search);
+        const isGuestMode = urlParams.get('mode') === 'guest';
 
-        // --- SISTEM PENGAMBILAN DATA (REALTIME DARI FIREBASE) ---
+        // --- SISTEM PENGAMBILAN DATA (HANYA UNTUK ADMIN) ---
         async function fetchDataDariFirebase() {
-            toggleLoader(true, "Mengunduh Data Cloud...");
+            if (isGuestMode) return; // Tamu tidak boleh mendownload data
+            
+            toggleLoader(true, "Mengunduh Data...");
             try {
-                // Mengambil koleksi 'tamu' dan mengurutkan dari yang terbaru
-                const snapshot = await db.collection("tamu").orderBy("timestamp", "desc").get();
+                const snapshot = await dbFirestore.collection("tamu").orderBy("timestamp", "desc").get();
                 const data = [];
-                snapshot.forEach(doc => {
-                    data.push({ id_firebase: doc.id, ...doc.data() });
-                });
+                snapshot.forEach(doc => { data.push({ id_firebase: doc.id, ...doc.data() }); });
                 state.guests = data;
-                router.render(null, true); // True agar tidak memanggil fetch ulang
+                if (state.view === 'dashboard' || state.view === 'history') {
+                    router.render(null); 
+                }
             } catch (error) {
-                console.error("Firebase Error: ", error);
-                showToast("Gagal Terhubung ke Database", "error");
+                console.error(error);
+                showToast("Gagal Terhubung Database", "error");
             } finally {
                 toggleLoader(false);
             }
@@ -152,33 +155,38 @@
         // --- SISTEM ROUTER ---
         const router = {
             navigate: (view, extra = null) => {
+                if(isGuestMode && view !== 'form' && view !== 'success') return; // Tamu dilarang ke dashboard/history
                 window.location.hash = view; 
                 state.view = view;
                 router.render(extra);
                 closeMenu();
             },
-            render: (extraData, isRefreshing = false) => {
+            render: (extraData) => {
                 const content = document.getElementById('app-content');
                 
-                // UI Status Nav
-                document.getElementById('nav-dashboard').className = `flex flex-col items-center transition ${state.view === 'dashboard' ? 'text-indigo-600' : 'text-slate-400'}`;
-                document.getElementById('nav-history').className = `flex flex-col items-center transition ${state.view === 'history' ? 'text-indigo-600' : 'text-slate-400'}`;
+                // UI Navigasi Admin
+                if(!isGuestMode) {
+                    document.getElementById('nav-dashboard').className = `flex flex-col items-center transition ${state.view === 'dashboard' ? 'text-indigo-600' : 'text-slate-400'}`;
+                    document.getElementById('nav-history').className = `flex flex-col items-center transition ${state.view === 'history' ? 'text-indigo-600' : 'text-slate-400'}`;
+                }
 
-                if (state.view === 'dashboard') {
+                if (state.view === 'dashboard' && !isGuestMode) {
                     content.innerHTML = views.dashboard();
-                    const formUrl = window.location.href.split('#')[0] + "#form"; 
-                    setTimeout(() => { initChart(); generateQR("school-qr", formUrl, 130); }, 100);
+                    // URL QR CODE DIJAMIN TEMBUS KE FORM
+                    const cleanUrl = window.location.href.split('#')[0].split('?')[0];
+                    const qrUrl = cleanUrl + "?mode=guest"; 
+                    setTimeout(() => { initChart(); generateQR("school-qr", qrUrl, 140); }, 100);
 
                 } else if (state.view === 'form') {
                     content.innerHTML = views.form();
                     setTimeout(initSignature, 100);
 
                 } else if (state.view === 'success') {
-                    if (!extraData) return router.navigate('dashboard');
+                    if (!extraData) return router.navigate(isGuestMode ? 'form' : 'dashboard');
                     content.innerHTML = views.success(extraData);
                     setTimeout(() => generateQR("visitor-qr", extraData.id, 140), 100);
 
-                } else if (state.view === 'history') {
+                } else if (state.view === 'history' && !isGuestMode) {
                     content.innerHTML = views.history();
                 }
             }
@@ -187,7 +195,7 @@
         window.addEventListener('hashchange', () => {
             const hashView = window.location.hash.substring(1) || 'dashboard';
             if (state.view !== hashView) {
-                if(hashView === 'success') { window.location.hash = 'dashboard'; return; }
+                if(hashView === 'success') { window.location.hash = isGuestMode ? 'form' : 'dashboard'; return; }
                 state.view = hashView;
                 router.render();
             }
@@ -210,20 +218,18 @@
                         </div>
                     </div>
 
+                    <div class="bg-white border border-slate-100 p-6 rounded-[2rem] text-center shadow-sm">
+                        <h4 class="text-xs font-extrabold text-slate-800 mb-4 uppercase tracking-widest">QR CODE PENDAFTARAN</h4>
+                        <div id="school-qr" class="qr-container bg-white p-3 border-4 border-slate-50 rounded-2xl inline-block mb-3"></div>
+                        <p class="text-[10px] font-black text-indigo-500 uppercase tracking-widest">Arahkan Kamera HP Kesini</p>
+                    </div>
+
                     <div class="grid grid-cols-2 gap-4">
                         <div class="bg-white border border-slate-100 p-5 rounded-[2rem] text-center flex flex-col items-center justify-center shadow-sm">
                             <h3 class="text-3xl font-extrabold text-slate-800">${state.guests.length}</h3>
-                            <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-1">Total Tamu</p>
+                            <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-1">Total Database</p>
                         </div>
-                        <div class="bg-white border border-slate-100 p-4 rounded-[2rem] text-center flex flex-col items-center justify-center shadow-sm">
-                            <div id="school-qr" class="qr-container mb-2"></div>
-                            <p class="text-[8px] font-black text-indigo-500 uppercase tracking-widest">Arahkan Kamera HP Kesini</p>
-                        </div>
-                    </div>
-
-                    <div class="bg-white border border-slate-100 p-5 rounded-[2rem] relative shadow-sm">
-                        <h4 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Grafik Mingguan</h4>
-                        <div class="relative w-full h-[150px]">
+                        <div class="bg-white border border-slate-100 p-4 rounded-[2rem] relative shadow-sm">
                             <canvas id="visitChart"></canvas>
                         </div>
                     </div>
@@ -237,38 +243,38 @@
                         <p class="text-xs text-slate-400 font-medium">Mohon isi formulir dengan lengkap.</p>
                     </div>
                     <form onsubmit="handleSimpanKeFirebase(event)" class="space-y-4">
-                        <input type="text" id="fname" required class="w-full p-4 bg-white border border-slate-200 rounded-2xl text-sm font-semibold text-slate-700 focus:border-indigo-500 outline-none transition" placeholder="Nama Lengkap *">
-                        <input type="text" id="fagency" required class="w-full p-4 bg-white border border-slate-200 rounded-2xl text-sm font-semibold text-slate-700 focus:border-indigo-500 outline-none transition" placeholder="Asal Instansi/Alamat *">
-                        <input type="tel" id="fphone" class="w-full p-4 bg-white border border-slate-200 rounded-2xl text-sm font-semibold text-slate-700 focus:border-indigo-500 outline-none transition" placeholder="No. Handphone / WA (Opsional)">
-                        <textarea id="fpurpose" required class="w-full p-4 bg-white border border-slate-200 rounded-2xl text-sm font-semibold text-slate-700 focus:border-indigo-500 outline-none transition resize-none" rows="3" placeholder="Keperluan Kunjungan *"></textarea>
+                        <input type="text" id="fname" required class="w-full p-4 bg-white border border-slate-200 rounded-2xl text-sm font-semibold text-slate-700 focus:border-indigo-500 outline-none transition shadow-sm" placeholder="Nama Lengkap Sesuai KTP *">
+                        <input type="text" id="fagency" required class="w-full p-4 bg-white border border-slate-200 rounded-2xl text-sm font-semibold text-slate-700 focus:border-indigo-500 outline-none transition shadow-sm" placeholder="Asal Instansi/Alamat *">
+                        <input type="tel" id="fphone" class="w-full p-4 bg-white border border-slate-200 rounded-2xl text-sm font-semibold text-slate-700 focus:border-indigo-500 outline-none transition shadow-sm" placeholder="No. Handphone / WA (Opsional)">
+                        <textarea id="fpurpose" required class="w-full p-4 bg-white border border-slate-200 rounded-2xl text-sm font-semibold text-slate-700 focus:border-indigo-500 outline-none transition resize-none shadow-sm" rows="3" placeholder="Keperluan Kunjungan *"></textarea>
                         
-                        <div class="bg-amber-50 border border-amber-200 p-4 rounded-2xl flex gap-3 items-start">
+                        <div class="bg-amber-50 border border-amber-200 p-4 rounded-2xl flex gap-3 items-start shadow-sm">
                             <span class="material-icons text-amber-500 mt-0.5">gpp_maybe</span>
                             <div>
-                                <h4 class="text-xs font-extrabold text-amber-800 mb-1">Pemeriksaan Identitas Resmi</h4>
-                                <p class="text-[10px] text-amber-700 font-semibold leading-relaxed">Pihak keamanan sekolah berhak meminta dan memfoto KTP/SIM/ID Card Anda sebagai bukti tamu resmi yang terdaftar.</p>
+                                <h4 class="text-xs font-extrabold text-amber-800 mb-1">Verifikasi Identitas</h4>
+                                <p class="text-[10px] text-amber-700 font-semibold leading-relaxed">Petugas keamanan akan memfoto KTP/SIM asli Anda sebagai syarat masuk ke area sekolah.</p>
                             </div>
                         </div>
 
-                        <div class="bg-white border border-slate-200 p-2 rounded-2xl">
+                        <div class="bg-white border border-slate-200 p-2 rounded-2xl shadow-sm">
                             <canvas id="signature-pad"></canvas>
                             <div class="flex justify-between items-center p-2 pt-3">
                                 <span class="text-[9px] font-black text-slate-300 uppercase tracking-widest">Tanda Tangan *</span>
-                                <button type="button" onclick="clearSig()" class="text-[9px] font-black text-indigo-600 uppercase tracking-widest bg-indigo-50 px-2 py-1 rounded-md active:scale-95 transition">Hapus</button>
+                                <button type="button" onclick="clearSig()" class="text-[9px] font-black text-indigo-600 uppercase tracking-widest bg-indigo-50 px-3 py-1 rounded-md active:scale-95 transition">Hapus</button>
                             </div>
                         </div>
-                        <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 active:scale-95 transition-all text-white p-5 rounded-2xl font-extrabold shadow-xl shadow-indigo-100 tracking-widest text-xs uppercase">Kirim ke Cloud</button>
+                        <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 active:scale-95 transition-all text-white p-5 rounded-2xl font-extrabold shadow-xl shadow-indigo-200 tracking-widest text-xs uppercase mt-2">Daftar & Buat Tiket</button>
                     </form>
                 </div>`,
             
             success: (g) => `
-                <div class="fade-in space-y-5 pb-5">
+                <div class="fade-in space-y-5 pb-5 mt-4">
                     <div class="text-center mb-6">
                         <div class="bg-green-100 text-green-600 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3 shadow-lg shadow-green-50">
                             <span class="material-icons text-3xl">how_to_reg</span>
                         </div>
                         <h2 class="text-xl font-extrabold text-slate-800">Registrasi Berhasil!</h2>
-                        <p class="text-[11px] font-bold text-red-500 mt-1 uppercase tracking-wider animate-pulse">📸 SCREENSHOT KARTU INI</p>
+                        <p class="text-[11px] font-black text-red-500 mt-2 uppercase tracking-wider animate-pulse bg-red-50 inline-block px-3 py-1 rounded-full border border-red-200">📸 WAJIB SCREENSHOT KARTU INI</p>
                     </div>
 
                     <div class="id-card">
@@ -289,25 +295,30 @@
                                     <span class="text-[9px] font-black text-slate-400 uppercase">Waktu Daftar</span>
                                     <span class="text-[10px] font-bold text-slate-700">${g.date} | ${g.time}</span>
                                 </div>
+                                <div class="flex justify-between items-center border-b border-slate-50 pb-2">
+                                    <span class="text-[9px] font-black text-slate-400 uppercase">Keperluan</span>
+                                    <span class="text-[10px] font-bold text-slate-700 max-w-[120px] text-right truncate">${g.purpose}</span>
+                                </div>
                                 <div class="flex justify-between items-center">
-                                    <span class="text-[9px] font-black text-slate-400 uppercase">ID Registrasi</span>
+                                    <span class="text-[9px] font-black text-slate-400 uppercase">ID Sistem</span>
                                     <span class="text-[10px] font-bold text-slate-700">${g.id}</span>
                                 </div>
                             </div>
                         </div>
-                        <div class="bg-indigo-50 p-3 flex gap-2 items-center justify-center text-indigo-500">
+                        <div class="bg-indigo-50 p-3 flex gap-2 items-center justify-center text-indigo-600">
                             <span class="material-icons text-sm">photo_camera</span>
-                            <p class="text-[8px] font-black uppercase tracking-wider">Tunjukkan ke Petugas Piket / Satpam</p>
+                            <p class="text-[8px] font-black uppercase tracking-wider">Tunjukkan ke Petugas Keamanan</p>
                         </div>
                     </div>
-                    <button onclick="router.navigate('dashboard')" class="w-full py-4 mt-2 text-slate-400 hover:text-indigo-600 transition font-black text-[10px] uppercase tracking-widest">Selesai & Kembali</button>
+                    
+                    ${!isGuestMode ? `<button onclick="router.navigate('dashboard')" class="w-full py-4 mt-2 text-slate-400 hover:text-indigo-600 transition font-black text-[10px] uppercase tracking-widest">Selesai & Kembali</button>` : `<p class="text-center text-[9px] text-slate-400 font-bold mt-4 uppercase">Silakan tutup halaman web ini.</p>`}
                 </div>`,
             
             history: () => `
                 <div class="fade-in space-y-5">
                     <div class="flex justify-between items-center">
-                        <h2 class="text-xl font-extrabold text-slate-800">Database Cloud</h2>
-                        <span class="bg-indigo-100 text-indigo-600 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest">${state.guests.length} Data</span>
+                        <h2 class="text-xl font-extrabold text-slate-800">Database Tamu</h2>
+                        <span class="text-[9px] font-black text-indigo-500 bg-indigo-50 px-3 py-1.5 rounded-full uppercase tracking-widest">${state.guests.length} Data</span>
                     </div>
                     <div class="space-y-3">
                         ${state.guests.length === 0 ? '<div class="text-center py-20"><span class="material-icons text-5xl text-slate-200 mb-2">folder_open</span><p class="text-slate-400 text-[10px] font-black uppercase tracking-widest">Database Kosong</p></div>' : ''}
@@ -355,44 +366,32 @@
                 const clientY = e.touches && e.touches.length > 0 ? e.touches[0].clientY : e.clientY;
                 return { x: clientX - r.left, y: clientY - r.top };
             };
-
             const start = (e) => { e.preventDefault(); drawing = true; const p = getPos(e); sigCtx.beginPath(); sigCtx.moveTo(p.x, p.y); };
             const move = (e) => { if(!drawing) return; e.preventDefault(); const p = getPos(e); sigCtx.lineTo(p.x, p.y); sigCtx.stroke(); };
             const stop = (e) => { if(drawing) { e.preventDefault(); drawing = false; }};
 
-            sigCanvas.addEventListener('mousedown', start);
-            sigCanvas.addEventListener('mousemove', move);
-            sigCanvas.addEventListener('mouseup', stop);
-            sigCanvas.addEventListener('mouseout', stop);
-
-            sigCanvas.addEventListener('touchstart', start, {passive: false});
-            sigCanvas.addEventListener('touchmove', move, {passive: false});
-            sigCanvas.addEventListener('touchend', stop);
+            sigCanvas.addEventListener('mousedown', start); sigCanvas.addEventListener('mousemove', move); sigCanvas.addEventListener('mouseup', stop); sigCanvas.addEventListener('mouseout', stop);
+            sigCanvas.addEventListener('touchstart', start, {passive: false}); sigCanvas.addEventListener('touchmove', move, {passive: false}); sigCanvas.addEventListener('touchend', stop);
         }
         function clearSig() { if(sigCtx) sigCtx.clearRect(0, 0, sigCanvas.width, sigCanvas.height); }
 
         // --- SISTEM GRAFIK ---
         function initChart() {
             const ctx = document.getElementById('visitChart');
-            if(!ctx) return;
+            if(!ctx || typeof Chart === 'undefined') return;
             
-            // Hitung data 7 hari terakhir dari database
+            // Generate data 7 hari terakhir dari array guests
             const last7Days = Array.from({length: 7}, (_, i) => {
-                const d = new Date();
-                d.setDate(d.getDate() - (6 - i));
+                const d = new Date(); d.setDate(d.getDate() - (6 - i));
                 return d.toISOString().split('T')[0];
             });
-
             const counts = last7Days.map(date => state.guests.filter(g => g.date === date).length);
-            const labels = ['H-6', 'H-5', 'H-4', 'H-3', 'H-2', 'H-1', 'Hari Ini'];
+            const labels = ['H-6', 'H-5', 'H-4', 'H-3', 'H-2', 'H-1', 'Hr Ini'];
 
             new Chart(ctx, {
                 type: 'line',
-                data: {
-                    labels: labels,
-                    datasets: [{ data: counts, borderColor: '#4f46e5', tension: 0.4, fill: true, backgroundColor: 'rgba(79, 70, 229, 0.1)', borderWidth: 3, pointRadius: 4, pointBackgroundColor: '#4f46e5' }]
-                },
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks:{stepSize:1} }, x: { grid: { display: false }, ticks: { font: { size: 9, family: "'Plus Jakarta Sans', sans-serif" } } } } }
+                data: { labels: labels, datasets: [{ data: counts, borderColor: '#4f46e5', tension: 0.4, fill: true, backgroundColor: 'rgba(79, 70, 229, 0.1)', borderWidth: 3, pointRadius: 4, pointBackgroundColor: '#4f46e5' }] },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { display: false }, x: { grid: { display: false }, ticks: { font: { size: 9, family: "'Plus Jakarta Sans', sans-serif" } } } } }
             });
         }
 
@@ -404,10 +403,10 @@
             if (sigData.length < 2000) return showToast("Tanda tangan wajib diisi!", "error");
             if (!navigator.onLine) return showToast("Gagal! Anda sedang offline.", "error");
             
-            toggleLoader(true, "Mengunggah ke Cloud...");
+            toggleLoader(true, "Mengunggah Data...");
             
             const guest = {
-                id: 'REG-' + Math.random().toString(36).substr(2, 6).toUpperCase(),
+                id: 'T-' + Math.random().toString(36).substr(2, 6).toUpperCase(),
                 name: document.getElementById('fname').value,
                 agency: document.getElementById('fagency').value,
                 phone: document.getElementById('fphone').value || '-',
@@ -415,39 +414,27 @@
                 date: new Date().toISOString().split('T')[0],
                 time: new Date().toLocaleTimeString('id-ID', {hour:'2-digit', minute:'2-digit'}),
                 signature: sigData,
-                timestamp: firebase.firestore.FieldValue.serverTimestamp() // Waktu asli server Google
+                timestamp: firebase.firestore.FieldValue.serverTimestamp()
             };
             
             try {
-                // Proses penyimpanan (insert) ke tabel "tamu" di Firestore
-                await db.collection("tamu").add(guest);
-                
-                // Jika sukses, perbarui data lokal dan buka halaman success
+                await dbFirestore.collection("tamu").add(guest);
                 state.guests.unshift(guest);
                 router.navigate('success', guest);
-                showToast("Berhasil Tersimpan di Cloud!");
-                
             } catch (error) {
                 console.error(error);
-                showToast("Gagal mengirim data", "error");
+                showToast("Gagal mendaftar", "error");
             } finally {
                 toggleLoader(false);
             }
         }
 
         // --- KONTROL MENU & ACTION ---
-        function toggleMenu(e) { 
-            if(e) e.stopPropagation(); 
-            document.getElementById('quick-menu').classList.toggle('hidden'); 
-        }
-        function closeMenu() {
-            const menu = document.getElementById('quick-menu');
-            if(menu && !menu.classList.contains('hidden')) menu.classList.add('hidden');
-        }
+        function toggleMenu(e) { if(e) e.stopPropagation(); document.getElementById('quick-menu').classList.toggle('hidden'); }
+        function closeMenu() { const m = document.getElementById('quick-menu'); if(m && !m.classList.contains('hidden')) m.classList.add('hidden'); }
         document.addEventListener('click', (e) => {
-            const menuBtn = document.getElementById('menu-btn');
-            const menu = document.getElementById('quick-menu');
-            if(menuBtn && menu && !menu.contains(e.target) && !menuBtn.contains(e.target)) closeMenu();
+            const mBtn = document.getElementById('menu-btn'); const m = document.getElementById('quick-menu');
+            if(mBtn && m && !m.contains(e.target) && !mBtn.contains(e.target)) closeMenu();
         });
 
         async function handleAction(a) {
@@ -478,50 +465,45 @@
                         new TableCell({children:[new Paragraph({children:[new TextRun({text:"NO HP", bold:true})]})]})
                     ]}),
                     ...state.guests.map(g => new TableRow({ children: [
-                        new TableCell({children:[new Paragraph(g.date)]}), 
-                        new TableCell({children:[new Paragraph(g.name)]}), 
-                        new TableCell({children:[new Paragraph(g.agency)]}),
-                        new TableCell({children:[new Paragraph(g.phone)]})
+                        new TableCell({children:[new Paragraph(g.date)]}), new TableCell({children:[new Paragraph(g.name)]}), new TableCell({children:[new Paragraph(g.agency)]}), new TableCell({children:[new Paragraph(g.phone)]})
                     ]}))
                 ];
                 const doc = new Document({ sections: [{ children: [new Paragraph({text:"LAPORAN BUKU TAMU SMK QUEEN AL-FALAH", heading:"Heading1"}), new Paragraph({text:"\n"}), new Table({width:{size:100, type:WidthType.PERCENTAGE}, rows})] }] });
                 const blob = await Packer.toBlob(doc);
                 saveAs(blob, `Laporan_Tamu_${new Date().getTime()}.docx`);
                 showToast("Word Berhasil Diunduh");
-            } catch(e) {
-                showToast("Gagal Buat File", "error");
-            } finally {
-                toggleLoader(false);
-            }
+            } catch(e) { showToast("Gagal Buat File", "error"); } finally { toggleLoader(false); }
         }
         
         // --- UI UTILS ---
         function showToast(m, type="success") { 
-            const t = document.getElementById('toast'); 
-            const i = document.getElementById('toast-icon');
+            const t = document.getElementById('toast'); const i = document.getElementById('toast-icon');
             document.getElementById('toast-msg').innerText = m; 
             i.innerText = type === "success" ? "check_circle" : "error";
             i.className = `material-icons text-sm ${type === "success" ? "text-green-400" : "text-red-400"}`;
-            t.classList.remove('hidden'); 
-            setTimeout(()=>t.classList.add('hidden'), 2500); 
+            t.classList.remove('hidden'); setTimeout(()=>t.classList.add('hidden'), 2500); 
         }
-        
-        function toggleLoader(s, t) { 
-            document.getElementById('loader').classList.toggle('hidden', !s); 
-            if(t) document.getElementById('loader-text').innerText = t; 
-        }
+        function toggleLoader(s, t) { document.getElementById('loader').classList.toggle('hidden', !s); if(t) document.getElementById('loader-text').innerText = t; }
 
         function updateOnlineStatus() {
             const b = document.getElementById('status-badge');
             const isO = navigator.onLine;
-            b.innerText = isO ? "Online (Cloud)" : "Offline";
+            b.innerText = isO ? "Online Server" : "Offline";
             b.className = `px-2 py-1 ${isO ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'} text-[8px] font-black rounded-md transition-all uppercase shadow-sm`;
         }
 
-        // --- INITIALIZATION ---
+        // --- INITIALIZATION TERKUNCI ---
         window.onload = () => {
-            // Langsung tarik data dari Firebase saat web dibuka
-            fetchDataDariFirebase();
+            // EKSEKUSI GUEST MODE (MENGHILANGKAN NAVIGASI ADMIN)
+            if (isGuestMode) {
+                document.getElementById('main-nav').style.display = 'none';
+                document.getElementById('menu-btn').style.display = 'none';
+                router.navigate('form');
+            } else {
+                fetchDataDariFirebase();
+                const initView = window.location.hash.substring(1) || 'dashboard';
+                router.navigate(initView === 'success' ? 'dashboard' : initView);
+            }
             
             updateOnlineStatus();
             window.addEventListener('online', updateOnlineStatus);
