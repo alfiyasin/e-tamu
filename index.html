@@ -5,12 +5,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>E-Tamu Digital - SMK Queen Al-Falah</title>
     
-    <!-- LIBRARIES -->
+    <!-- LIBRARIES DASAR -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://unpkg.com/docx@7.1.0/build/index.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    
+    <!-- LIBRARIES FIREBASE V8 COMPAT (Stabil untuk single HTML file) -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
     
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
@@ -20,23 +24,15 @@
         .app-shell { max-width: 500px; margin: 0 auto; background: white; height: 100vh; display: flex; flex-direction: column; box-shadow: 0 0 50px rgba(0,0,0,0.1); }
         .main-content { flex: 1; overflow-y: auto; padding: 20px; padding-bottom: 100px; scroll-behavior: smooth; }
         .main-content::-webkit-scrollbar { width: 0px; }
-        
         .nav-bar { height: 70px; background: white; border-top: 1px solid #f1f5f9; display: flex; justify-content: space-around; align-items: center; position: relative; z-index: 10; }
         .btn-add { width: 60px; height: 60px; background: #4f46e5; color: white; border-radius: 20px; display: flex; align-items: center; justify-content: center; position: absolute; top: -30px; left: 50%; transform: translateX(-50%); box-shadow: 0 10px 20px rgba(79, 70, 229, 0.3); transition: transform 0.1s; }
         .btn-add:active { transform: translateX(-50%) scale(0.95); }
-        
-        /* Tanda Tangan Anti Scroll Lock */
-        #signature-pad { border: 2px dashed #cbd5e1; border-radius: 16px; background: #f8fafc; width: 100%; height: 180px; touch-action: none; cursor: crosshair; }
-        
+        #signature-pad { border: 2px dashed #cbd5e1; border-radius: 16px; background: white; width: 100%; height: 180px; touch-action: none; cursor: crosshair; }
         .qr-container { display: flex; justify-content: center; align-items: center; }
         .qr-container img { margin: 0 auto !important; border-radius: 8px; }
-        
         .loading-overlay { position: fixed; inset: 0; background: rgba(255,255,255,0.95); z-index: 100; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-        
         .fade-in { animation: fadeIn 0.3s ease-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
-        
-        /* Desain Khusus Kartu Tamu untuk Screenshot */
         .id-card { background: white; border-radius: 24px; box-shadow: 0 20px 40px -10px rgba(0,0,0,0.15); overflow: hidden; border: 1px solid #e2e8f0; max-width: 340px; margin: 0 auto; position: relative;}
         .id-card-header { background: #4f46e5; padding: 20px; text-align: center; color: white; }
     </style>
@@ -44,9 +40,9 @@
 <body>
 
     <!-- LAYER LOADING -->
-    <div id="loader" class="loading-overlay hidden">
+    <div id="loader" class="loading-overlay">
         <div class="w-12 h-12 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
-        <p id="loader-text" class="mt-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Processing...</p>
+        <p id="loader-text" class="mt-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Menghubungkan Server...</p>
     </div>
 
     <div class="app-shell relative" id="app-shell">
@@ -54,11 +50,11 @@
         <header class="p-5 border-b border-slate-100 flex justify-between items-center bg-white/90 backdrop-blur-sm sticky top-0 z-20">
             <div class="flex items-center gap-3">
                 <div class="bg-indigo-600 p-2 rounded-xl text-white shadow-lg shadow-indigo-100">
-                    <span class="material-icons">qr_code_scanner</span>
+                    <span class="material-icons">cloud</span>
                 </div>
                 <div>
                     <h1 class="font-extrabold text-base leading-none text-slate-800">E-Tamu</h1>
-                    <p class="text-[9px] text-indigo-500 font-black uppercase tracking-widest mt-0.5">SMK Queen Al-Falah</p>
+                    <p class="text-[9px] text-indigo-500 font-black uppercase tracking-widest mt-0.5">Cloud Database</p>
                 </div>
             </div>
             <div class="flex items-center gap-2">
@@ -70,10 +66,7 @@
         </header>
 
         <!-- MENU GANTUNG -->
-        <div id="quick-menu" class="hidden absolute top-20 right-5 w-56 bg-white shadow-2xl border border-slate-100 rounded-2xl p-2 z-50 animate-fade-in origin-top-right">
-            <button onclick="handleAction('sync')" class="w-full flex items-center gap-3 p-3 text-[10px] font-bold text-slate-700 hover:bg-slate-50 rounded-xl uppercase transition">
-                <span class="material-icons text-indigo-500 text-sm">cloud_sync</span> Singkron Data
-            </button>
+        <div id="quick-menu" class="hidden absolute top-20 right-5 w-48 bg-white shadow-2xl border border-slate-100 rounded-2xl p-2 z-50 animate-fade-in origin-top-right">
             <button onclick="handleAction('excel')" class="w-full flex items-center gap-3 p-3 text-[10px] font-bold text-slate-700 hover:bg-slate-50 rounded-xl uppercase transition">
                 <span class="material-icons text-emerald-500 text-sm">file_download</span> Export Excel
             </button>
@@ -81,8 +74,8 @@
                 <span class="material-icons text-blue-500 text-sm">description</span> Export Word
             </button>
             <hr class="my-1 border-slate-100">
-            <button onclick="router.navigate('setup')" class="w-full flex items-center gap-3 p-3 text-[10px] font-bold text-slate-400 hover:bg-slate-50 rounded-xl uppercase transition">
-                <span class="material-icons text-sm">settings</span> Setup Sheet
+            <button onclick="fetchDataDariFirebase()" class="w-full flex items-center gap-3 p-3 text-[10px] font-bold text-indigo-500 hover:bg-indigo-50 rounded-xl uppercase transition">
+                <span class="material-icons text-sm">refresh</span> Refresh Data
             </button>
         </div>
 
@@ -114,21 +107,49 @@
     </div>
 
     <script>
-        // --- DATA & STORAGE ENGINE ---
-        const DB_KEY = 'etamu_pro_v1';
-        const CFG_KEY = 'etamu_cfg_pro_v1';
-
-        const db = {
-            getGuests: () => JSON.parse(localStorage.getItem(DB_KEY) || '[]'),
-            saveGuest: (g) => { const data = db.getGuests(); data.unshift(g); localStorage.setItem(DB_KEY, JSON.stringify(data)); },
-            getConfig: () => JSON.parse(localStorage.getItem(CFG_KEY) || '{"url":""}'),
-            saveConfig: (c) => localStorage.setItem(CFG_KEY, JSON.stringify(c)),
-            clear: () => { if(confirm("Hapus semua riwayat di perangkat ini?")) { localStorage.setItem(DB_KEY, '[]'); router.render(); } }
+        // =========================================================
+        // =========================================================
+        // 1. SETUP FIREBASE DATABASE
+        // =========================================================
+        
+        const firebaseConfig = {
+            apiKey: "AIzaSyCoNcCneR5g19dTRY7zAZzL53fCeOvpsCg",
+            authDomain: "e-tamu-smk-queen.firebaseapp.com",
+            projectId: "e-tamu-smk-queen",
+            storageBucket: "e-tamu-smk-queen.firebasestorage.app",
+            messagingSenderId: "948856871318",
+            appId: "1:948856871318:web:7b5cad269762ced6f525b7"
         };
+        // =========================================================
 
+        // Inisialisasi Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        // State Global Aplikasi
         let state = { view: 'dashboard', guests: [] };
 
-        // --- SISTEM ROUTER SUPER AMAN ---
+        // --- SISTEM PENGAMBILAN DATA (REALTIME DARI FIREBASE) ---
+        async function fetchDataDariFirebase() {
+            toggleLoader(true, "Mengunduh Data Cloud...");
+            try {
+                // Mengambil koleksi 'tamu' dan mengurutkan dari yang terbaru
+                const snapshot = await db.collection("tamu").orderBy("timestamp", "desc").get();
+                const data = [];
+                snapshot.forEach(doc => {
+                    data.push({ id_firebase: doc.id, ...doc.data() });
+                });
+                state.guests = data;
+                router.render(null, true); // True agar tidak memanggil fetch ulang
+            } catch (error) {
+                console.error("Firebase Error: ", error);
+                showToast("Gagal Terhubung ke Database", "error");
+            } finally {
+                toggleLoader(false);
+            }
+        }
+
+        // --- SISTEM ROUTER ---
         const router = {
             navigate: (view, extra = null) => {
                 window.location.hash = view; 
@@ -136,53 +157,36 @@
                 router.render(extra);
                 closeMenu();
             },
-            render: (extraData) => {
+            render: (extraData, isRefreshing = false) => {
                 const content = document.getElementById('app-content');
-                state.guests = db.getGuests();
-
+                
                 // UI Status Nav
                 document.getElementById('nav-dashboard').className = `flex flex-col items-center transition ${state.view === 'dashboard' ? 'text-indigo-600' : 'text-slate-400'}`;
                 document.getElementById('nav-history').className = `flex flex-col items-center transition ${state.view === 'history' ? 'text-indigo-600' : 'text-slate-400'}`;
 
                 if (state.view === 'dashboard') {
                     content.innerHTML = views.dashboard();
-                    
-                    // ANTI-BUG: Pembuatan URL QR yang 100% langsung masuk ke form
-                    const currentUrl = window.location.href.split('#')[0]; 
-                    const formUrl = currentUrl + "#form"; 
-                    
-                    setTimeout(() => { 
-                        initChart(); 
-                        generateQR("school-qr", formUrl, 130); 
-                    }, 100);
+                    const formUrl = window.location.href.split('#')[0] + "#form"; 
+                    setTimeout(() => { initChart(); generateQR("school-qr", formUrl, 130); }, 100);
 
                 } else if (state.view === 'form') {
                     content.innerHTML = views.form();
                     setTimeout(initSignature, 100);
 
                 } else if (state.view === 'success') {
-                    // ANTI-BUG: Mencegah error layar putih jika user manual ketik #success di URL
-                    if (!extraData) {
-                        return router.navigate('dashboard');
-                    }
+                    if (!extraData) return router.navigate('dashboard');
                     content.innerHTML = views.success(extraData);
                     setTimeout(() => generateQR("visitor-qr", extraData.id, 140), 100);
 
                 } else if (state.view === 'history') {
                     content.innerHTML = views.history();
-
-                } else if (state.view === 'setup') {
-                    content.innerHTML = views.setup();
                 }
             }
         };
 
-        // Deteksi tombol back di HP
         window.addEventListener('hashchange', () => {
             const hashView = window.location.hash.substring(1) || 'dashboard';
-            // Hindari render ulang jika view tidak berubah
             if (state.view !== hashView) {
-                // Lindungi route success
                 if(hashView === 'success') { window.location.hash = 'dashboard'; return; }
                 state.view = hashView;
                 router.render();
@@ -232,16 +236,12 @@
                         <h2 class="text-xl font-extrabold text-slate-800">Buku Tamu</h2>
                         <p class="text-xs text-slate-400 font-medium">Mohon isi formulir dengan lengkap.</p>
                     </div>
-                    <form onsubmit="handleSimpan(event)" class="space-y-4">
+                    <form onsubmit="handleSimpanKeFirebase(event)" class="space-y-4">
                         <input type="text" id="fname" required class="w-full p-4 bg-white border border-slate-200 rounded-2xl text-sm font-semibold text-slate-700 focus:border-indigo-500 outline-none transition" placeholder="Nama Lengkap *">
                         <input type="text" id="fagency" required class="w-full p-4 bg-white border border-slate-200 rounded-2xl text-sm font-semibold text-slate-700 focus:border-indigo-500 outline-none transition" placeholder="Asal Instansi/Alamat *">
-                        
-                        <!-- Penambahan Nomor HP -->
                         <input type="tel" id="fphone" class="w-full p-4 bg-white border border-slate-200 rounded-2xl text-sm font-semibold text-slate-700 focus:border-indigo-500 outline-none transition" placeholder="No. Handphone / WA (Opsional)">
-                        
                         <textarea id="fpurpose" required class="w-full p-4 bg-white border border-slate-200 rounded-2xl text-sm font-semibold text-slate-700 focus:border-indigo-500 outline-none transition resize-none" rows="3" placeholder="Keperluan Kunjungan *"></textarea>
                         
-                        <!-- Peringatan Keamanan -->
                         <div class="bg-amber-50 border border-amber-200 p-4 rounded-2xl flex gap-3 items-start">
                             <span class="material-icons text-amber-500 mt-0.5">gpp_maybe</span>
                             <div>
@@ -250,7 +250,6 @@
                             </div>
                         </div>
 
-                        <!-- Canvas Tanda Tangan -->
                         <div class="bg-white border border-slate-200 p-2 rounded-2xl">
                             <canvas id="signature-pad"></canvas>
                             <div class="flex justify-between items-center p-2 pt-3">
@@ -258,11 +257,10 @@
                                 <button type="button" onclick="clearSig()" class="text-[9px] font-black text-indigo-600 uppercase tracking-widest bg-indigo-50 px-2 py-1 rounded-md active:scale-95 transition">Hapus</button>
                             </div>
                         </div>
-                        <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 active:scale-95 transition-all text-white p-5 rounded-2xl font-extrabold shadow-xl shadow-indigo-100 tracking-widest text-xs uppercase">Simpan & Selesai</button>
+                        <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 active:scale-95 transition-all text-white p-5 rounded-2xl font-extrabold shadow-xl shadow-indigo-100 tracking-widest text-xs uppercase">Kirim ke Cloud</button>
                     </form>
                 </div>`,
             
-            // KARTU TAMU UNTUK DI SCREENSHOT
             success: (g) => `
                 <div class="fade-in space-y-5 pb-5">
                     <div class="text-center mb-6">
@@ -273,16 +271,13 @@
                         <p class="text-[11px] font-bold text-red-500 mt-1 uppercase tracking-wider animate-pulse">📸 SCREENSHOT KARTU INI</p>
                     </div>
 
-                    <!-- KARTU ID CARD -->
                     <div class="id-card">
                         <div class="id-card-header">
                             <h3 class="font-black tracking-[0.2em] text-lg">KARTU TAMU</h3>
                             <p class="text-[9px] uppercase tracking-widest opacity-80 mt-1">SMK Queen Al-Falah</p>
                         </div>
                         <div class="p-6 flex flex-col items-center bg-white relative">
-                            <!-- Watermark Background -->
                             <span class="material-icons absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-[150px] text-slate-50 opacity-50 z-0 pointer-events-none">verified_user</span>
-                            
                             <div id="visitor-qr" class="qr-container p-2 bg-white border-2 border-slate-100 rounded-xl mb-4 relative z-10 shadow-sm"></div>
                             <h2 class="text-lg font-extrabold text-slate-800 text-center uppercase leading-tight relative z-10 break-all">${g.name}</h2>
                             <p class="text-xs font-bold text-indigo-600 text-center mt-1 relative z-10">${g.agency}</p>
@@ -293,10 +288,6 @@
                                 <div class="flex justify-between items-center border-b border-slate-50 pb-2">
                                     <span class="text-[9px] font-black text-slate-400 uppercase">Waktu Daftar</span>
                                     <span class="text-[10px] font-bold text-slate-700">${g.date} | ${g.time}</span>
-                                </div>
-                                <div class="flex justify-between items-center border-b border-slate-50 pb-2">
-                                    <span class="text-[9px] font-black text-slate-400 uppercase">Keperluan</span>
-                                    <span class="text-[10px] font-bold text-slate-700 max-w-[120px] text-right truncate">${g.purpose}</span>
                                 </div>
                                 <div class="flex justify-between items-center">
                                     <span class="text-[9px] font-black text-slate-400 uppercase">ID Registrasi</span>
@@ -309,18 +300,17 @@
                             <p class="text-[8px] font-black uppercase tracking-wider">Tunjukkan ke Petugas Piket / Satpam</p>
                         </div>
                     </div>
-
                     <button onclick="router.navigate('dashboard')" class="w-full py-4 mt-2 text-slate-400 hover:text-indigo-600 transition font-black text-[10px] uppercase tracking-widest">Selesai & Kembali</button>
                 </div>`,
             
             history: () => `
                 <div class="fade-in space-y-5">
                     <div class="flex justify-between items-center">
-                        <h2 class="text-xl font-extrabold text-slate-800">Riwayat</h2>
-                        <button onclick="db.clear()" class="text-[9px] font-black text-red-500 bg-red-50 px-3 py-2 rounded-lg uppercase tracking-widest hover:bg-red-100 transition shadow-sm">Kosongkan</button>
+                        <h2 class="text-xl font-extrabold text-slate-800">Database Cloud</h2>
+                        <span class="bg-indigo-100 text-indigo-600 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest">${state.guests.length} Data</span>
                     </div>
                     <div class="space-y-3">
-                        ${state.guests.length === 0 ? '<div class="text-center py-20"><span class="material-icons text-5xl text-slate-200 mb-2">folder_open</span><p class="text-slate-400 text-[10px] font-black uppercase tracking-widest">Data Kosong</p></div>' : ''}
+                        ${state.guests.length === 0 ? '<div class="text-center py-20"><span class="material-icons text-5xl text-slate-200 mb-2">folder_open</span><p class="text-slate-400 text-[10px] font-black uppercase tracking-widest">Database Kosong</p></div>' : ''}
                         ${state.guests.map(g => `
                             <div class="bg-white border border-slate-100 p-4 rounded-3xl flex items-center gap-4 shadow-sm hover:shadow-md transition">
                                 <div class="w-12 h-12 rounded-[1rem] bg-indigo-50 flex items-center justify-center text-indigo-600 font-black text-lg">${g.name.charAt(0).toUpperCase()}</div>
@@ -336,21 +326,6 @@
                             </div>
                         `).join('')}
                     </div>
-                </div>`,
-            
-            setup: () => `
-                <div class="fade-in space-y-6">
-                    <div>
-                        <h2 class="text-xl font-extrabold text-slate-800">Penautan Database</h2>
-                        <p class="text-xs text-slate-400 mt-1">Sambungkan ke Google Sheets.</p>
-                    </div>
-                    <div class="space-y-4 bg-white p-5 rounded-[2rem] border border-slate-100 shadow-sm">
-                        <div>
-                            <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-2 block">Apps Script URL</label>
-                            <input type="url" id="cfg-url" value="${db.getConfig().url}" class="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-semibold text-slate-700 focus:border-indigo-500 outline-none" placeholder="https://script.google.com/macros/s/...">
-                        </div>
-                        <button onclick="saveCfg()" class="w-full bg-slate-900 active:scale-95 transition-transform text-white p-4 rounded-2xl font-extrabold uppercase text-[10px] tracking-widest shadow-lg">Simpan Penautan</button>
-                    </div>
                 </div>`
         };
 
@@ -359,29 +334,20 @@
             const el = document.getElementById(id);
             if(!el) return;
             el.innerHTML = "";
-            if (typeof QRCode === 'undefined') {
-                el.innerHTML = `<p class="text-[8px] text-slate-400 text-center py-4 border border-dashed rounded-lg border-slate-200">QR Gagal Dimuat</p>`;
-                return;
-            }
+            if (typeof QRCode === 'undefined') return;
             new QRCode(el, { text, width: size, height: size, colorDark: "#1e1b4b", colorLight: "#ffffff", correctLevel: QRCode.CorrectLevel.H });
         }
 
-        // --- SISTEM TANDA TANGAN 100% BEBAS BUG ---
+        // --- SISTEM TANDA TANGAN ---
         let sigCanvas, sigCtx, drawing = false;
         function initSignature() {
             sigCanvas = document.getElementById('signature-pad');
             if(!sigCanvas) return;
             sigCtx = sigCanvas.getContext('2d');
-            
-            // Atur ukuran aktual canvas
             const rect = sigCanvas.getBoundingClientRect();
             sigCanvas.width = rect.width;
             sigCanvas.height = rect.height;
-            
-            sigCtx.lineWidth = 3; 
-            sigCtx.lineCap = 'round'; 
-            sigCtx.lineJoin = 'round'; 
-            sigCtx.strokeStyle = '#4f46e5';
+            sigCtx.lineWidth = 3; sigCtx.lineCap = 'round'; sigCtx.lineJoin = 'round'; sigCtx.strokeStyle = '#4f46e5';
 
             const getPos = (e) => {
                 const r = sigCanvas.getBoundingClientRect();
@@ -394,7 +360,6 @@
             const move = (e) => { if(!drawing) return; e.preventDefault(); const p = getPos(e); sigCtx.lineTo(p.x, p.y); sigCtx.stroke(); };
             const stop = (e) => { if(drawing) { e.preventDefault(); drawing = false; }};
 
-            // Event Listener dipasang langsung ke Canvas agar tidak bocor ke layar utama
             sigCanvas.addEventListener('mousedown', start);
             sigCanvas.addEventListener('mousemove', move);
             sigCanvas.addEventListener('mouseup', stop);
@@ -410,52 +375,90 @@
         function initChart() {
             const ctx = document.getElementById('visitChart');
             if(!ctx) return;
-            if(typeof Chart === 'undefined') {
-                ctx.outerHTML = `<div class="flex items-center justify-center h-full text-[10px] text-slate-400 font-bold uppercase tracking-widest border border-dashed rounded-xl border-slate-200">Gagal Memuat Grafik</div>`;
-                return;
-            }
+            
+            // Hitung data 7 hari terakhir dari database
+            const last7Days = Array.from({length: 7}, (_, i) => {
+                const d = new Date();
+                d.setDate(d.getDate() - (6 - i));
+                return d.toISOString().split('T')[0];
+            });
+
+            const counts = last7Days.map(date => state.guests.filter(g => g.date === date).length);
+            const labels = ['H-6', 'H-5', 'H-4', 'H-3', 'H-2', 'H-1', 'Hari Ini'];
+
             new Chart(ctx, {
                 type: 'line',
                 data: {
-                    labels: ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'],
-                    datasets: [{ data: [0, 2, 5, 1, 8, 4, 10], borderColor: '#4f46e5', tension: 0.4, fill: true, backgroundColor: 'rgba(79, 70, 229, 0.1)', borderWidth: 3, pointRadius: 0 }]
+                    labels: labels,
+                    datasets: [{ data: counts, borderColor: '#4f46e5', tension: 0.4, fill: true, backgroundColor: 'rgba(79, 70, 229, 0.1)', borderWidth: 3, pointRadius: 4, pointBackgroundColor: '#4f46e5' }]
                 },
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { display: false }, x: { grid: { display: false }, ticks: { font: { size: 9, family: "'Plus Jakarta Sans', sans-serif" } } } } }
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks:{stepSize:1} }, x: { grid: { display: false }, ticks: { font: { size: 9, family: "'Plus Jakarta Sans', sans-serif" } } } } }
             });
+        }
+
+        // --- FUNGSI KIRIM DATA KE FIREBASE ---
+        async function handleSimpanKeFirebase(e) {
+            e.preventDefault();
+            const sigData = sigCanvas.toDataURL();
+            
+            if (sigData.length < 2000) return showToast("Tanda tangan wajib diisi!", "error");
+            if (!navigator.onLine) return showToast("Gagal! Anda sedang offline.", "error");
+            
+            toggleLoader(true, "Mengunggah ke Cloud...");
+            
+            const guest = {
+                id: 'REG-' + Math.random().toString(36).substr(2, 6).toUpperCase(),
+                name: document.getElementById('fname').value,
+                agency: document.getElementById('fagency').value,
+                phone: document.getElementById('fphone').value || '-',
+                purpose: document.getElementById('fpurpose').value,
+                date: new Date().toISOString().split('T')[0],
+                time: new Date().toLocaleTimeString('id-ID', {hour:'2-digit', minute:'2-digit'}),
+                signature: sigData,
+                timestamp: firebase.firestore.FieldValue.serverTimestamp() // Waktu asli server Google
+            };
+            
+            try {
+                // Proses penyimpanan (insert) ke tabel "tamu" di Firestore
+                await db.collection("tamu").add(guest);
+                
+                // Jika sukses, perbarui data lokal dan buka halaman success
+                state.guests.unshift(guest);
+                router.navigate('success', guest);
+                showToast("Berhasil Tersimpan di Cloud!");
+                
+            } catch (error) {
+                console.error(error);
+                showToast("Gagal mengirim data", "error");
+            } finally {
+                toggleLoader(false);
+            }
         }
 
         // --- KONTROL MENU & ACTION ---
         function toggleMenu(e) { 
-            if(e) e.stopPropagation(); // Mencegah event bocor
+            if(e) e.stopPropagation(); 
             document.getElementById('quick-menu').classList.toggle('hidden'); 
         }
-        
         function closeMenu() {
             const menu = document.getElementById('quick-menu');
             if(menu && !menu.classList.contains('hidden')) menu.classList.add('hidden');
         }
-
-        // AUTO CLOSE MENU jika klik sembarang tempat
         document.addEventListener('click', (e) => {
             const menuBtn = document.getElementById('menu-btn');
             const menu = document.getElementById('quick-menu');
-            if(menuBtn && menu && !menu.contains(e.target) && !menuBtn.contains(e.target)) {
-                closeMenu();
-            }
+            if(menuBtn && menu && !menu.contains(e.target) && !menuBtn.contains(e.target)) closeMenu();
         });
 
         async function handleAction(a) {
             closeMenu();
             if(a === 'excel') exportExcel();
             if(a === 'word') exportWord();
-            if(a === 'sync') syncToSheet();
         }
 
         // --- SISTEM EXPORT ---
         function exportExcel() {
             if(!state.guests.length) return showToast("Data Kosong", "error");
-            if(typeof saveAs === 'undefined') return showToast("Fitur Offline Gagal", "error");
-            
             let csv = "ID,TANGGAL,WAKTU,NAMA,INSTANSI,NO_HP,KEPERLUAN\n";
             state.guests.forEach(g => csv += `${g.id},${g.date},${g.time},"${g.name}","${g.agency}","${g.phone}","${g.purpose}"\n`);
             saveAs(new Blob([csv], {type:'text/csv;charset=utf-8;'}), `Data_Tamu_SMK_${new Date().getTime()}.csv`);
@@ -464,8 +467,6 @@
 
         async function exportWord() {
             if(!state.guests.length) return showToast("Data Kosong", "error");
-            if(typeof docx === 'undefined' || typeof saveAs === 'undefined') return showToast("Fitur Offline Gagal", "error");
-            
             toggleLoader(true, "Menyusun Docx...");
             try {
                 const { Document, Packer, Paragraph, Table, TableRow, TableCell, WidthType, TextRun } = docx;
@@ -493,58 +494,6 @@
                 toggleLoader(false);
             }
         }
-
-        // --- SISTEM SINKRONISASI API ---
-        async function syncToSheet(gSingle = null) {
-            const cfg = db.getConfig();
-            if(!cfg.url) return showToast("Setup URL Terlebih Dahulu", "error");
-            if(!navigator.onLine) return showToast("Koneksi Terputus", "error");
-            
-            toggleLoader(true, "Menyinkronkan...");
-            try {
-                await fetch(cfg.url, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify(gSingle ? {action: 'sync_all', guests:[gSingle]} : {action: 'sync_all', guests: db.getGuests()}) });
-                showToast("Data Tersinkron");
-            } catch(e) { 
-                showToast("Gagal Mengirim", "error"); 
-            } finally { 
-                toggleLoader(false); 
-            }
-        }
-
-        // --- PROSES SIMPAN FORM ---
-        function handleSimpan(e) {
-            e.preventDefault();
-            const sigData = sigCanvas.toDataURL();
-            
-            // Validasi Tanda Tangan Ketat
-            if (sigData.length < 2000) {
-                return showToast("Tanda tangan wajib diisi!", "error");
-            }
-            
-            const guest = {
-                id: 'ID-' + Math.random().toString(36).substr(2, 6).toUpperCase(),
-                name: document.getElementById('fname').value,
-                agency: document.getElementById('fagency').value,
-                phone: document.getElementById('fphone').value || '-',
-                purpose: document.getElementById('fpurpose').value,
-                date: new Date().toISOString().split('T')[0],
-                time: new Date().toLocaleTimeString('id-ID', {hour:'2-digit', minute:'2-digit'}),
-                signature: sigData
-            };
-            
-            db.saveGuest(guest);
-            router.navigate('success', guest);
-            
-            if(navigator.onLine) {
-                syncToSheet(guest);
-            }
-        }
-
-        function saveCfg() { 
-            db.saveConfig({url: document.getElementById('cfg-url').value}); 
-            showToast("Tersimpan!"); 
-            router.navigate('dashboard'); 
-        }
         
         // --- UI UTILS ---
         function showToast(m, type="success") { 
@@ -565,20 +514,14 @@
         function updateOnlineStatus() {
             const b = document.getElementById('status-badge');
             const isO = navigator.onLine;
-            b.innerText = isO ? "Online" : "Offline";
+            b.innerText = isO ? "Online (Cloud)" : "Offline";
             b.className = `px-2 py-1 ${isO ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'} text-[8px] font-black rounded-md transition-all uppercase shadow-sm`;
         }
 
-        // --- INIT ---
+        // --- INITIALIZATION ---
         window.onload = () => {
-            const initView = window.location.hash.substring(1) || 'dashboard';
-            
-            // Cegah loading ke halaman success jika tidak ada data
-            if(initView === 'success') {
-                router.navigate('dashboard');
-            } else {
-                router.navigate(initView);
-            }
+            // Langsung tarik data dari Firebase saat web dibuka
+            fetchDataDariFirebase();
             
             updateOnlineStatus();
             window.addEventListener('online', updateOnlineStatus);
