@@ -20,20 +20,60 @@
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
 
     <style>
-        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #f8fafc; overflow: hidden; -webkit-tap-highlight-color: transparent; }
-        .app-shell { max-width: 500px; margin: 0 auto; background: white; height: 100vh; display: flex; flex-direction: column; box-shadow: 0 0 50px rgba(0,0,0,0.1); }
+        body { 
+            font-family: 'Plus Jakarta Sans', sans-serif; 
+            /* Latar belakang khusus Desktop */
+            background-color: #f1f5f9; 
+            background-image: radial-gradient(#cbd5e1 1px, transparent 1px);
+            background-size: 20px 20px;
+            overflow: hidden; 
+            -webkit-tap-highlight-color: transparent; 
+        }
+
+        /* LAYOUT DINAMIS (RESPONSIVE) */
+        .app-shell { 
+            width: 100%; 
+            max-width: 100%; 
+            background: white; 
+            height: 100vh; 
+            display: flex; 
+            flex-direction: column; 
+            transition: all 0.3s ease-in-out;
+        }
+
+        /* Tampilan khusus Tablet dan PC (Layar > 768px) */
+        @media (min-width: 768px) {
+            .app-shell {
+                max-width: 800px;
+                height: 92vh;
+                margin: 4vh auto;
+                border-radius: 32px;
+                box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);
+                border: 1px solid #e2e8f0;
+                overflow: hidden;
+            }
+        }
+
         .main-content { flex: 1; overflow-y: auto; padding: 20px; padding-bottom: 100px; scroll-behavior: smooth; }
-        .main-content::-webkit-scrollbar { width: 0px; }
+        .main-content::-webkit-scrollbar { width: 4px; }
+        .main-content::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        
         .nav-bar { height: 70px; background: white; border-top: 1px solid #f1f5f9; display: flex; justify-content: space-around; align-items: center; position: relative; z-index: 10; }
+        
         .btn-add { width: 60px; height: 60px; background: #4f46e5; color: white; border-radius: 20px; display: flex; align-items: center; justify-content: center; position: absolute; top: -30px; left: 50%; transform: translateX(-50%); box-shadow: 0 10px 20px rgba(79, 70, 229, 0.3); transition: transform 0.1s; }
         .btn-add:active { transform: translateX(-50%) scale(0.95); }
+        
         #signature-pad { border: 2px dashed #cbd5e1; border-radius: 16px; background: white; width: 100%; height: 180px; touch-action: none; cursor: crosshair; }
+        
         .qr-container { display: flex; justify-content: center; align-items: center; }
         .qr-container img { margin: 0 auto !important; border-radius: 8px; }
+        
         .loading-overlay { position: fixed; inset: 0; background: rgba(255,255,255,0.95); z-index: 100; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        
         .fade-in { animation: fadeIn 0.3s ease-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
-        .id-card { background: white; border-radius: 24px; box-shadow: 0 20px 40px -10px rgba(0,0,0,0.15); overflow: hidden; border: 1px solid #e2e8f0; max-width: 340px; margin: 0 auto; position: relative;}
+        
+        .id-card { background: white; border-radius: 24px; box-shadow: 0 20px 40px -10px rgba(0,0,0,0.15); overflow: hidden; border: 1px solid #e2e8f0; max-width: 360px; margin: 0 auto; position: relative;}
         .id-card-header { background: #4f46e5; padding: 20px; text-align: center; color: white; }
     </style>
 </head>
@@ -42,40 +82,47 @@
     <!-- LAYER LOADING -->
     <div id="loader" class="loading-overlay hidden">
         <div class="w-12 h-12 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
-        <p id="loader-text" class="mt-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Processing...</p>
+        <p id="loader-text" class="mt-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Memproses...</p>
     </div>
 
     <div class="app-shell relative" id="app-shell">
         <!-- HEADER ATAS -->
         <header class="p-5 border-b border-slate-100 flex justify-between items-center bg-white/90 backdrop-blur-sm sticky top-0 z-20">
             <div class="flex items-center gap-3">
-                <div class="bg-indigo-600 p-2 rounded-xl text-white shadow-lg shadow-indigo-100">
+                <div class="bg-indigo-600 p-2.5 rounded-xl text-white shadow-lg shadow-indigo-100 flex items-center justify-center">
                     <span class="material-icons">qr_code_scanner</span>
                 </div>
                 <div>
-                    <h1 class="font-extrabold text-base leading-none text-slate-800">E-Tamu</h1>
+                    <h1 class="font-extrabold text-lg md:text-xl leading-none text-slate-800">E-Tamu</h1>
                     <p class="text-[9px] text-indigo-500 font-black uppercase tracking-widest mt-0.5">SMK Queen Al-Falah</p>
                 </div>
             </div>
             <div class="flex items-center gap-2">
-                <div id="status-badge" class="px-2 py-1 bg-slate-100 text-[8px] font-black rounded-md uppercase">...</div>
-                <button id="menu-btn" onclick="toggleMenu(event)" class="w-8 h-8 flex items-center justify-center bg-slate-50 hover:bg-slate-100 rounded-lg text-slate-600 transition">
+                <div id="status-badge" class="px-3 py-1 bg-slate-100 text-[9px] font-black rounded-lg uppercase hidden sm:block shadow-sm">...</div>
+                
+                <!-- TOMBOL GEMBOK LOGIN ADMIN -->
+                <button onclick="toggleAdmin()" id="lock-btn" class="w-10 h-10 flex items-center justify-center bg-slate-50 hover:bg-slate-100 rounded-xl text-slate-600 transition shadow-sm border border-slate-100">
+                    <span class="material-icons text-xl" id="lock-icon">lock</span>
+                </button>
+
+                <!-- Tombol Menu (Hanya terlihat jika Admin) -->
+                <button id="menu-btn" onclick="toggleMenu(event)" class="hidden w-10 h-10 flex items-center justify-center bg-indigo-50 hover:bg-indigo-100 rounded-xl text-indigo-600 transition shadow-sm border border-indigo-100">
                     <span class="material-icons text-xl pointer-events-none">widgets</span>
                 </button>
             </div>
         </header>
 
         <!-- MENU GANTUNG ADMIN -->
-        <div id="quick-menu" class="hidden absolute top-20 right-5 w-48 bg-white shadow-2xl border border-slate-100 rounded-2xl p-2 z-50 animate-fade-in origin-top-right">
-            <button onclick="handleAction('excel')" class="w-full flex items-center gap-3 p-3 text-[10px] font-bold text-slate-700 hover:bg-slate-50 rounded-xl uppercase transition">
-                <span class="material-icons text-emerald-500 text-sm">file_download</span> Export Excel
+        <div id="quick-menu" class="hidden absolute top-24 right-5 w-56 bg-white shadow-2xl border border-slate-100 rounded-2xl p-2 z-50 animate-fade-in origin-top-right">
+            <button onclick="handleAction('excel')" class="w-full flex items-center gap-3 p-3 text-xs font-bold text-slate-700 hover:bg-slate-50 rounded-xl transition">
+                <span class="material-icons text-emerald-500">file_download</span> Export Excel
             </button>
-            <button onclick="handleAction('word')" class="w-full flex items-center gap-3 p-3 text-[10px] font-bold text-slate-700 hover:bg-slate-50 rounded-xl uppercase transition">
-                <span class="material-icons text-blue-500 text-sm">description</span> Export Word
+            <button onclick="handleAction('word')" class="w-full flex items-center gap-3 p-3 text-xs font-bold text-slate-700 hover:bg-slate-50 rounded-xl transition">
+                <span class="material-icons text-blue-500">description</span> Export Word
             </button>
             <hr class="my-1 border-slate-100">
-            <button onclick="fetchDataDariFirebase()" class="w-full flex items-center gap-3 p-3 text-[10px] font-bold text-indigo-500 hover:bg-indigo-50 rounded-xl uppercase transition">
-                <span class="material-icons text-sm">refresh</span> Refresh Data
+            <button onclick="fetchDataDariFirebase()" class="w-full flex items-center gap-3 p-3 text-xs font-bold text-indigo-500 hover:bg-indigo-50 rounded-xl transition">
+                <span class="material-icons">refresh</span> Refresh Data
             </button>
         </div>
 
@@ -84,83 +131,103 @@
             <!-- Disuntik oleh Router -->
         </main>
 
-        <!-- NAVIGASI BAWAH ADMIN -->
-        <nav class="nav-bar" id="main-nav">
-            <button onclick="router.navigate('dashboard')" id="nav-dashboard" class="flex flex-col items-center transition">
-                <span class="material-icons">home</span>
-                <span class="text-[9px] font-black uppercase mt-1">Beranda</span>
+        <!-- NAVIGASI BAWAH (Hanya Admin) -->
+        <nav class="nav-bar hidden" id="main-nav">
+            <button onclick="router.navigate('dashboard')" id="nav-dashboard" class="flex flex-col items-center transition w-1/3">
+                <span class="material-icons text-2xl">space_dashboard</span>
+                <span class="text-[10px] font-black uppercase mt-1">Beranda</span>
             </button>
-            <button onclick="router.navigate('form')" class="btn-add">
-                <span class="material-icons text-3xl">add</span>
-            </button>
-            <button onclick="router.navigate('history')" id="nav-history" class="flex flex-col items-center transition">
-                <span class="material-icons">history</span>
-                <span class="text-[9px] font-black uppercase mt-1">Riwayat</span>
+            <div class="w-1/3 relative">
+                <button onclick="router.navigate('form')" class="btn-add">
+                    <span class="material-icons text-3xl">add</span>
+                </button>
+            </div>
+            <button onclick="router.navigate('history')" id="nav-history" class="flex flex-col items-center transition w-1/3">
+                <span class="material-icons text-2xl">history</span>
+                <span class="text-[10px] font-black uppercase mt-1">Riwayat</span>
             </button>
         </nav>
     </div>
 
     <!-- POPUP TOAST -->
-    <div id="toast" class="fixed bottom-28 left-1/2 -translate-x-1/2 bg-slate-900 text-white px-5 py-2.5 rounded-full text-[9px] font-black hidden z-[60] flex items-center gap-2 uppercase tracking-widest shadow-2xl">
-        <span class="material-icons text-sm text-green-400" id="toast-icon">check_circle</span>
+    <div id="toast" class="fixed bottom-28 left-1/2 -translate-x-1/2 bg-slate-900 text-white px-6 py-3 rounded-full text-xs font-bold hidden z-[60] flex items-center gap-3 shadow-2xl transition-all">
+        <span class="material-icons text-green-400" id="toast-icon">check_circle</span>
         <span id="toast-msg">Notifikasi</span>
     </div>
 
     <script>
         // =========================================================
-        // SETUP FIREBASE DATABASE MILIK ANDA
+        // SETUP FIREBASE DATABASE
         // =========================================================
-        let dbFirestore = null;
-        try {
-            const firebaseConfig = {
-                apiKey: "AIzaSyCoNcCneR5g19dTRY7zAZzL53fCeOvpsCg",
-                authDomain: "e-tamu-smk-queen.firebaseapp.com",
-                projectId: "e-tamu-smk-queen",
-                storageBucket: "e-tamu-smk-queen.firebasestorage.app",
-                messagingSenderId: "948856871318",
-                appId: "1:948856871318:web:7b5cad269762ced6f525b7"
-            };
-            firebase.initializeApp(firebaseConfig);
-            dbFirestore = firebase.firestore();
-        } catch (error) {
-            console.error("Firebase Config Error:", error);
+        const firebaseConfig = {
+            apiKey: "AIzaSyCoNcCneR5g19dTRY7zAZzL53fCeOvpsCg",
+            authDomain: "e-tamu-smk-queen.firebaseapp.com",
+            projectId: "e-tamu-smk-queen",
+            storageBucket: "e-tamu-smk-queen.firebasestorage.app",
+            messagingSenderId: "948856871318",
+            appId: "1:948856871318:web:7b5cad269762ced6f525b7"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const dbFirestore = firebase.firestore();
+
+        // =========================================================
+        // STATE & SISTEM LOGIN ADMIN
+        // =========================================================
+        const PIN_ADMIN = "123456";
+
+        let state = { 
+            view: 'form', 
+            guests: [],
+            isAdmin: sessionStorage.getItem('isAdmin') === 'true' 
+        };
+
+        function toggleAdmin() {
+            if (state.isAdmin) {
+                if(confirm("Keluar dari Mode Admin?")) {
+                    state.isAdmin = false;
+                    sessionStorage.removeItem('isAdmin');
+                    router.navigate('form'); 
+                    showToast("Mode Tamu Aktif", "success");
+                }
+            } else {
+                const pin = prompt("Masukkan PIN Admin Sekolah:");
+                if (pin === PIN_ADMIN) {
+                    state.isAdmin = true;
+                    sessionStorage.setItem('isAdmin', 'true');
+                    fetchDataDariFirebase();
+                    router.navigate('dashboard');
+                    showToast("Login Admin Berhasil", "success");
+                } else if (pin !== null) {
+                    showToast("PIN Salah!", "error");
+                }
+            }
         }
 
-        // =========================================================
-        // STATE & DETEKSI GUEST MODE
-        // =========================================================
-        let state = { view: 'dashboard', guests: [] };
-        
-        // Membaca URL parameters: jika ada ?tamu=true, maka kunci aplikasi (Mode Tamu)
-        const urlParams = new URLSearchParams(window.location.search);
-        const isGuestMode = urlParams.get('tamu') === 'true';
-
-        // --- PENGAMBILAN DATA CLOUD (HANYA ADMIN) ---
         async function fetchDataDariFirebase() {
-            if (isGuestMode || !dbFirestore) return; 
-            
+            if (!state.isAdmin) return; 
             toggleLoader(true, "Mengunduh Data...");
             try {
                 const snapshot = await dbFirestore.collection("tamu").orderBy("timestamp", "desc").get();
                 const data = [];
                 snapshot.forEach(doc => { data.push({ id_firebase: doc.id, ...doc.data() }); });
                 state.guests = data;
+                
                 if (state.view === 'dashboard' || state.view === 'history') {
                     router.render(); 
                 }
             } catch (error) {
-                console.error("Fetch error:", error);
+                console.error(error); showToast("Gagal Terhubung Database", "error");
             } finally {
                 toggleLoader(false);
             }
         }
 
-        // --- SISTEM ROUTER TUNGGAL (ANTI NYANGKUT) ---
+        // --- SISTEM ROUTER ---
         const router = {
             navigate: (view, extra = null) => {
-                // Proteksi: Jika tamu, hanya boleh buka form atau success
-                if (isGuestMode && view !== 'form' && view !== 'success') return; 
-                
+                if (!state.isAdmin && view !== 'form' && view !== 'success') {
+                    view = 'form';
+                }
                 window.location.hash = view; 
                 state.view = view;
                 router.render(extra);
@@ -169,194 +236,222 @@
             render: (extraData) => {
                 const content = document.getElementById('app-content');
                 
-                // UI Navigasi Khusus Admin
-                if(!isGuestMode) {
-                    const navDash = document.getElementById('nav-dashboard');
-                    const navHist = document.getElementById('nav-history');
-                    if(navDash) navDash.className = `flex flex-col items-center transition ${state.view === 'dashboard' ? 'text-indigo-600' : 'text-slate-400'}`;
-                    if(navHist) navHist.className = `flex flex-col items-center transition ${state.view === 'history' ? 'text-indigo-600' : 'text-slate-400'}`;
+                // UI Toggle Admin
+                document.getElementById('main-nav').style.display = state.isAdmin ? 'flex' : 'none';
+                document.getElementById('menu-btn').style.display = state.isAdmin ? 'flex' : 'none';
+                document.getElementById('lock-icon').innerText = state.isAdmin ? 'lock_open' : 'lock';
+                document.getElementById('lock-btn').className = state.isAdmin 
+                    ? 'w-10 h-10 flex items-center justify-center bg-red-50 hover:bg-red-100 rounded-xl text-red-500 transition border border-red-100' 
+                    : 'w-10 h-10 flex items-center justify-center bg-slate-50 hover:bg-slate-100 rounded-xl text-slate-600 transition border border-slate-100';
+
+                if(state.isAdmin) {
+                    document.getElementById('nav-dashboard').className = `flex flex-col items-center transition w-1/3 ${state.view === 'dashboard' ? 'text-indigo-600' : 'text-slate-400'}`;
+                    document.getElementById('nav-history').className = `flex flex-col items-center transition w-1/3 ${state.view === 'history' ? 'text-indigo-600' : 'text-slate-400'}`;
                 }
 
-                // Render Sesuai Halaman
-                if (state.view === 'dashboard' && !isGuestMode) {
+                if (state.view === 'dashboard' && state.isAdmin) {
                     content.innerHTML = views.dashboard();
-                    // URL QR CODE PASTI TEMBUS KE FORM
                     const cleanUrl = window.location.href.split('#')[0].split('?')[0];
-                    const qrUrl = cleanUrl + "?tamu=true"; 
-                    setTimeout(() => { initChart(); generateQR("school-qr", qrUrl, 140); }, 100);
+                    setTimeout(() => { initChart(); generateQR("school-qr", cleanUrl, 160); }, 100);
 
-                } 
-                else if (state.view === 'form') {
+                } else if (state.view === 'form') {
                     content.innerHTML = views.form();
                     setTimeout(initSignature, 100);
 
-                } 
-                else if (state.view === 'success') {
-                    // Jika refresh di halaman success, kembalikan ke form/dashboard agar tidak error
-                    if (!extraData) return router.navigate(isGuestMode ? 'form' : 'dashboard');
-                    
+                } else if (state.view === 'success') {
+                    if (!extraData) return router.navigate(state.isAdmin ? 'dashboard' : 'form');
                     content.innerHTML = views.success(extraData);
-                    setTimeout(() => generateQR("visitor-qr", extraData.id, 140), 100);
+                    setTimeout(() => generateQR("visitor-qr", extraData.id, 150), 100);
 
-                } 
-                else if (state.view === 'history' && !isGuestMode) {
+                } else if (state.view === 'history' && state.isAdmin) {
                     content.innerHTML = views.history();
-                } 
-                else {
-                    // Fallback jika terjadi error URL
-                    router.navigate(isGuestMode ? 'form' : 'dashboard');
+                } else {
+                    router.navigate(state.isAdmin ? 'dashboard' : 'form');
                 }
             }
         };
 
-        // Deteksi tombol kembali (Back) di HP
         window.addEventListener('hashchange', () => {
-            if (isGuestMode) return; // Tamu tidak bisa pakai tombol back
-            const hashView = window.location.hash.substring(1) || 'dashboard';
+            const hashView = window.location.hash.substring(1) || (state.isAdmin ? 'dashboard' : 'form');
             if (state.view !== hashView) {
-                if(hashView === 'success') return router.navigate('dashboard');
-                state.view = hashView;
-                router.render();
+                if(hashView === 'success') { window.location.hash = state.isAdmin ? 'dashboard' : 'form'; return; }
+                router.navigate(hashView);
             }
         });
 
-        // --- TEMPLATE TAMPILAN (VIEWS) ---
+        // --- TEMPLATE TAMPILAN DINAMIS (VIEWS) ---
         const views = {
             dashboard: () => {
                 const today = new Date().toISOString().split('T')[0];
                 const tCount = state.guests.filter(g => g.date === today).length;
                 return `
-                <div class="fade-in space-y-6">
-                    <div class="bg-indigo-600 p-6 rounded-[2rem] text-white shadow-xl shadow-indigo-100 flex justify-between items-center">
-                        <div>
-                            <p class="text-[10px] font-black uppercase opacity-70 tracking-widest mb-1">Tamu Hari Ini</p>
-                            <h3 class="text-4xl font-extrabold">${tCount}</h3>
+                <div class="fade-in space-y-6 md:space-y-8 max-w-4xl mx-auto">
+                    
+                    <!-- Top Stats Grid -->
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div class="bg-indigo-600 p-6 md:p-8 rounded-[2rem] text-white shadow-xl shadow-indigo-100 flex justify-between items-center md:col-span-2">
+                            <div>
+                                <p class="text-xs font-black uppercase opacity-80 tracking-widest mb-2">Total Tamu Hari Ini</p>
+                                <h3 class="text-5xl font-extrabold">${tCount}</h3>
+                            </div>
+                            <div class="w-16 h-16 bg-white/20 rounded-[1.5rem] flex items-center justify-center">
+                                <span class="material-icons text-4xl">people</span>
+                            </div>
                         </div>
-                        <div class="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center">
-                            <span class="material-icons text-3xl">people</span>
+
+                        <div class="bg-white border border-slate-100 p-6 rounded-[2rem] text-center flex flex-col items-center justify-center shadow-sm">
+                            <h3 class="text-4xl font-extrabold text-slate-800">${state.guests.length}</h3>
+                            <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-2">Total Database</p>
                         </div>
                     </div>
 
-                    <div class="bg-white border border-slate-100 p-6 rounded-[2rem] text-center shadow-sm">
-                        <h4 class="text-xs font-extrabold text-slate-800 mb-4 uppercase tracking-widest">QR CODE PENDAFTARAN</h4>
-                        <div id="school-qr" class="qr-container bg-white p-3 border-4 border-slate-50 rounded-2xl inline-block mb-3"></div>
-                        <p class="text-[10px] font-black text-indigo-500 uppercase tracking-widest">Arahkan Kamera HP Tamu Kesini</p>
-                    </div>
-
-                    <div class="grid grid-cols-2 gap-4">
-                        <div class="bg-white border border-slate-100 p-5 rounded-[2rem] text-center flex flex-col items-center justify-center shadow-sm">
-                            <h3 class="text-3xl font-extrabold text-slate-800">${state.guests.length}</h3>
-                            <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-1">Total Database</p>
+                    <!-- Bottom Grid -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="bg-white border border-slate-100 p-6 md:p-8 rounded-[2rem] text-center shadow-sm h-full flex flex-col justify-center">
+                            <h4 class="text-sm font-extrabold text-slate-800 mb-6 uppercase tracking-widest">QR PENDAFTARAN MANDIRI</h4>
+                            <div id="school-qr" class="qr-container bg-white p-4 border-4 border-slate-50 rounded-[2rem] inline-block mb-4 shadow-sm"></div>
+                            <p class="text-[10px] font-black text-indigo-500 uppercase tracking-widest">Arahkan Kamera HP Tamu</p>
                         </div>
-                        <div class="bg-white border border-slate-100 p-4 rounded-[2rem] relative shadow-sm">
-                            <canvas id="visitChart"></canvas>
+
+                        <div class="bg-white border border-slate-100 p-6 md:p-8 rounded-[2rem] relative shadow-sm h-full">
+                            <h4 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6">Grafik Kunjungan (7 Hari)</h4>
+                            <div class="relative w-full h-[200px]">
+                                <canvas id="visitChart"></canvas>
+                            </div>
                         </div>
                     </div>
                 </div>`;
             },
             
             form: () => `
-                <div class="fade-in space-y-5">
-                    <div>
-                        <h2 class="text-xl font-extrabold text-slate-800">Buku Tamu</h2>
-                        <p class="text-xs text-slate-400 font-medium">Mohon isi formulir dengan lengkap.</p>
+                <div class="fade-in space-y-6 md:max-w-2xl md:mx-auto">
+                    <div class="md:text-center md:mb-8">
+                        <h2 class="text-2xl md:text-3xl font-extrabold text-slate-800">Formulir Tamu</h2>
+                        <p class="text-sm text-slate-500 font-medium mt-1">Selamat datang di SMK Queen Al-Falah.</p>
                     </div>
-                    <form onsubmit="handleSimpanKeFirebase(event)" class="space-y-4">
-                        <input type="text" id="fname" required class="w-full p-4 bg-white border border-slate-200 rounded-2xl text-sm font-semibold text-slate-700 focus:border-indigo-500 outline-none transition shadow-sm" placeholder="Nama Lengkap Sesuai KTP *">
-                        <input type="text" id="fagency" required class="w-full p-4 bg-white border border-slate-200 rounded-2xl text-sm font-semibold text-slate-700 focus:border-indigo-500 outline-none transition shadow-sm" placeholder="Asal Instansi/Alamat *">
-                        <input type="tel" id="fphone" class="w-full p-4 bg-white border border-slate-200 rounded-2xl text-sm font-semibold text-slate-700 focus:border-indigo-500 outline-none transition shadow-sm" placeholder="No. Handphone / WA (Opsional)">
-                        <textarea id="fpurpose" required class="w-full p-4 bg-white border border-slate-200 rounded-2xl text-sm font-semibold text-slate-700 focus:border-indigo-500 outline-none transition resize-none shadow-sm" rows="3" placeholder="Keperluan Kunjungan *"></textarea>
+
+                    <form onsubmit="handleSimpanKeFirebase(event)" class="space-y-4 md:space-y-5">
+                        <!-- Grid untuk Desktop -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-5">
+                            <div class="space-y-1">
+                                <label class="text-[10px] font-bold text-slate-500 uppercase ml-2">Nama Sesuai KTP *</label>
+                                <input type="text" id="fname" required class="w-full p-4 bg-white border border-slate-200 rounded-2xl text-sm font-semibold text-slate-800 focus:border-indigo-500 outline-none transition shadow-sm" placeholder="Contoh: Budi Santoso">
+                            </div>
+                            <div class="space-y-1">
+                                <label class="text-[10px] font-bold text-slate-500 uppercase ml-2">No. HP / WA (Opsional)</label>
+                                <input type="tel" id="fphone" class="w-full p-4 bg-white border border-slate-200 rounded-2xl text-sm font-semibold text-slate-800 focus:border-indigo-500 outline-none transition shadow-sm" placeholder="0812-3456-7890">
+                            </div>
+                        </div>
                         
-                        <div class="bg-amber-50 border border-amber-200 p-4 rounded-2xl flex gap-3 items-start shadow-sm">
-                            <span class="material-icons text-amber-500 mt-0.5">gpp_maybe</span>
+                        <div class="space-y-1">
+                            <label class="text-[10px] font-bold text-slate-500 uppercase ml-2">Asal Instansi / Alamat *</label>
+                            <input type="text" id="fagency" required class="w-full p-4 bg-white border border-slate-200 rounded-2xl text-sm font-semibold text-slate-800 focus:border-indigo-500 outline-none transition shadow-sm" placeholder="Contoh: PT. Maju Mundur / Jl. Raya Kediri">
+                        </div>
+
+                        <div class="space-y-1">
+                            <label class="text-[10px] font-bold text-slate-500 uppercase ml-2">Tujuan & Keperluan *</label>
+                            <textarea id="fpurpose" required class="w-full p-4 bg-white border border-slate-200 rounded-2xl text-sm font-semibold text-slate-800 focus:border-indigo-500 outline-none transition resize-none shadow-sm h-28" placeholder="Bertemu Bapak/Ibu... untuk keperluan..."></textarea>
+                        </div>
+                        
+                        <div class="bg-amber-50 border border-amber-200 p-4 md:p-5 rounded-2xl flex gap-3 items-start shadow-sm">
+                            <span class="material-icons text-amber-500 mt-0.5 md:text-3xl">gpp_maybe</span>
                             <div>
-                                <h4 class="text-xs font-extrabold text-amber-800 mb-1">Verifikasi Identitas</h4>
-                                <p class="text-[10px] text-amber-700 font-semibold leading-relaxed">Petugas keamanan sekolah berhak meminta dan memfoto KTP/SIM asli Anda sebagai syarat masuk ke area sekolah.</p>
+                                <h4 class="text-xs md:text-sm font-extrabold text-amber-800 mb-1">Verifikasi Identitas Resmi</h4>
+                                <p class="text-[10px] md:text-xs text-amber-700 font-semibold leading-relaxed">Petugas keamanan berhak memfoto KTP/SIM asli Anda sebagai syarat masuk ke area sekolah.</p>
                             </div>
                         </div>
 
-                        <div class="bg-white border border-slate-200 p-2 rounded-2xl shadow-sm">
-                            <canvas id="signature-pad"></canvas>
-                            <div class="flex justify-between items-center p-2 pt-3">
-                                <span class="text-[9px] font-black text-slate-300 uppercase tracking-widest">Tanda Tangan *</span>
-                                <button type="button" onclick="clearSig()" class="text-[9px] font-black text-indigo-600 uppercase tracking-widest bg-indigo-50 px-3 py-1 rounded-md active:scale-95 transition">Hapus</button>
+                        <div class="bg-white border border-slate-200 p-2 md:p-3 rounded-2xl shadow-sm">
+                            <div class="flex justify-between items-center p-2 mb-1">
+                                <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Tanda Tangan Digital *</span>
+                                <button type="button" onclick="clearSig()" class="text-[10px] font-black text-indigo-600 uppercase tracking-widest bg-indigo-50 px-3 py-1.5 rounded-lg active:scale-95 transition">Bersihkan</button>
                             </div>
+                            <canvas id="signature-pad" class="w-full"></canvas>
                         </div>
-                        <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 active:scale-95 transition-all text-white p-5 rounded-2xl font-extrabold shadow-xl shadow-indigo-200 tracking-widest text-xs uppercase mt-2">Daftar & Buat Tiket</button>
+                        
+                        <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 active:scale-95 transition-all text-white p-5 md:p-6 rounded-2xl font-extrabold shadow-xl shadow-indigo-200 tracking-widest text-sm uppercase mt-4">Kirim Pendaftaran</button>
                     </form>
                 </div>`,
             
             success: (g) => `
-                <div class="fade-in space-y-5 pb-5 mt-4">
-                    <div class="text-center mb-6">
-                        <div class="bg-green-100 text-green-600 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3 shadow-lg shadow-green-50">
-                            <span class="material-icons text-3xl">how_to_reg</span>
+                <div class="fade-in space-y-6 pb-5 mt-4 md:max-w-md md:mx-auto">
+                    <div class="text-center mb-8">
+                        <div class="bg-green-100 text-green-600 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg shadow-green-50">
+                            <span class="material-icons text-4xl">how_to_reg</span>
                         </div>
-                        <h2 class="text-xl font-extrabold text-slate-800">Registrasi Berhasil!</h2>
-                        <p class="text-[11px] font-black text-red-500 mt-2 uppercase tracking-wider animate-pulse bg-red-50 inline-block px-3 py-1 rounded-full border border-red-200">📸 WAJIB SCREENSHOT KARTU INI</p>
+                        <h2 class="text-2xl font-extrabold text-slate-800">Registrasi Berhasil!</h2>
+                        <p class="text-xs font-black text-red-500 mt-2 uppercase tracking-wider animate-pulse bg-red-50 inline-block px-4 py-1.5 rounded-full border border-red-200">📸 WAJIB SCREENSHOT KARTU INI</p>
                     </div>
 
                     <div class="id-card">
-                        <div class="id-card-header">
-                            <h3 class="font-black tracking-[0.2em] text-lg">KARTU TAMU</h3>
-                            <p class="text-[9px] uppercase tracking-widest opacity-80 mt-1">SMK Queen Al-Falah</p>
+                        <div class="id-card-header py-6">
+                            <h3 class="font-black tracking-[0.2em] text-xl">KARTU TAMU</h3>
+                            <p class="text-[10px] uppercase tracking-widest opacity-80 mt-1">SMK Queen Al-Falah</p>
                         </div>
-                        <div class="p-6 flex flex-col items-center bg-white relative">
-                            <span class="material-icons absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-[150px] text-slate-50 opacity-50 z-0 pointer-events-none">verified_user</span>
-                            <div id="visitor-qr" class="qr-container p-2 bg-white border-2 border-slate-100 rounded-xl mb-4 relative z-10 shadow-sm"></div>
-                            <h2 class="text-lg font-extrabold text-slate-800 text-center uppercase leading-tight relative z-10 break-all">${g.name}</h2>
-                            <p class="text-xs font-bold text-indigo-600 text-center mt-1 relative z-10">${g.agency}</p>
+                        <div class="p-8 flex flex-col items-center bg-white relative">
+                            <span class="material-icons absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-[180px] text-slate-50 opacity-40 z-0 pointer-events-none">verified_user</span>
                             
-                            <div class="w-full border-t-2 border-dashed border-slate-200 my-5 relative z-10"></div>
+                            <div id="visitor-qr" class="qr-container p-3 bg-white border-2 border-slate-100 rounded-xl mb-5 relative z-10 shadow-sm"></div>
+                            <h2 class="text-xl font-extrabold text-slate-800 text-center uppercase leading-tight relative z-10 break-all">${g.name}</h2>
+                            <p class="text-sm font-bold text-indigo-600 text-center mt-2 relative z-10">${g.agency}</p>
                             
-                            <div class="w-full text-left space-y-3 relative z-10">
+                            <div class="w-full border-t-2 border-dashed border-slate-200 my-6 relative z-10"></div>
+                            
+                            <div class="w-full text-left space-y-4 relative z-10">
                                 <div class="flex justify-between items-center border-b border-slate-50 pb-2">
-                                    <span class="text-[9px] font-black text-slate-400 uppercase">Waktu Daftar</span>
-                                    <span class="text-[10px] font-bold text-slate-700">${g.date} | ${g.time}</span>
+                                    <span class="text-[10px] font-black text-slate-400 uppercase">Waktu Daftar</span>
+                                    <span class="text-xs font-bold text-slate-800">${g.date} | ${g.time}</span>
                                 </div>
                                 <div class="flex justify-between items-center border-b border-slate-50 pb-2">
-                                    <span class="text-[9px] font-black text-slate-400 uppercase">Keperluan</span>
-                                    <span class="text-[10px] font-bold text-slate-700 max-w-[120px] text-right truncate">${g.purpose}</span>
+                                    <span class="text-[10px] font-black text-slate-400 uppercase">Keperluan</span>
+                                    <span class="text-xs font-bold text-slate-800 max-w-[140px] text-right truncate">${g.purpose}</span>
                                 </div>
                                 <div class="flex justify-between items-center">
-                                    <span class="text-[9px] font-black text-slate-400 uppercase">ID Sistem</span>
-                                    <span class="text-[10px] font-bold text-slate-700">${g.id}</span>
+                                    <span class="text-[10px] font-black text-slate-400 uppercase">ID Sistem</span>
+                                    <span class="text-xs font-bold text-slate-800">${g.id}</span>
                                 </div>
                             </div>
                         </div>
-                        <div class="bg-indigo-50 p-3 flex gap-2 items-center justify-center text-indigo-600">
-                            <span class="material-icons text-sm">photo_camera</span>
-                            <p class="text-[8px] font-black uppercase tracking-wider">Tunjukkan ke Petugas Keamanan</p>
+                        <div class="bg-indigo-50 p-4 flex gap-2 items-center justify-center text-indigo-600 border-t border-indigo-100">
+                            <span class="material-icons text-base">photo_camera</span>
+                            <p class="text-[9px] font-black uppercase tracking-wider">Tunjukkan ke Petugas / Satpam</p>
                         </div>
                     </div>
                     
-                    ${!isGuestMode ? `<button onclick="router.navigate('dashboard')" class="w-full py-4 mt-2 text-slate-400 hover:text-indigo-600 transition font-black text-[10px] uppercase tracking-widest">Selesai & Kembali</button>` : `<div class="mt-6 text-center"><span class="material-icons text-slate-300 text-3xl">task_alt</span><p class="text-[10px] text-slate-400 font-bold mt-2 uppercase tracking-widest">Silakan tutup halaman ini.</p></div>`}
+                    ${state.isAdmin ? `<button onclick="router.navigate('dashboard')" class="w-full py-5 mt-4 text-slate-500 hover:text-indigo-600 transition font-black text-xs uppercase tracking-widest bg-white border border-slate-200 rounded-2xl shadow-sm">Selesai & Kembali</button>` : `<button onclick="router.navigate('form')" class="w-full py-5 mt-4 text-slate-500 hover:text-indigo-600 transition font-black text-xs uppercase tracking-widest bg-white border border-slate-200 rounded-2xl shadow-sm">Tutup & Daftar Baru</button>`}
                 </div>`,
             
             history: () => `
-                <div class="fade-in space-y-5">
-                    <div class="flex justify-between items-center">
-                        <h2 class="text-xl font-extrabold text-slate-800">Database Cloud</h2>
-                        <button onclick="hapusSemuaDataTamu()" class="text-[9px] font-black text-red-500 bg-red-50 px-3 py-2 rounded-lg uppercase tracking-widest hover:bg-red-100 transition shadow-sm">Hapus Semua</button>
+                <div class="fade-in space-y-6 md:max-w-4xl md:mx-auto">
+                    <div class="flex flex-col md:flex-row md:justify-between md:items-center gap-4 border-b border-slate-100 pb-4">
+                        <div>
+                            <h2 class="text-2xl font-extrabold text-slate-800">Database Tamu</h2>
+                            <p class="text-xs text-slate-500 font-medium mt-1">Data tersimpan di Cloud Firebase.</p>
+                        </div>
+                        <div class="flex gap-2">
+                            <span class="text-[10px] font-black text-indigo-600 bg-indigo-50 px-4 py-2.5 rounded-xl uppercase tracking-widest flex items-center shadow-sm">${state.guests.length} Data</span>
+                            <button onclick="hapusSemuaDataTamu()" class="text-[10px] font-black text-red-500 bg-red-50 px-4 py-2.5 rounded-xl uppercase tracking-widest hover:bg-red-100 transition shadow-sm flex items-center gap-1"><span class="material-icons text-sm">delete_sweep</span> Kosongkan</button>
+                        </div>
                     </div>
-                    <div class="space-y-3">
-                        ${state.guests.length === 0 ? '<div class="text-center py-20"><span class="material-icons text-5xl text-slate-200 mb-2">folder_open</span><p class="text-slate-400 text-[10px] font-black uppercase tracking-widest">Database Kosong</p></div>' : ''}
+
+                    <div class="space-y-4 md:grid md:grid-cols-2 md:gap-4 md:space-y-0">
+                        ${state.guests.length === 0 ? '<div class="col-span-2 text-center py-24"><span class="material-icons text-6xl text-slate-200 mb-3 block">folder_open</span><p class="text-slate-400 text-xs font-black uppercase tracking-widest">Database Kosong</p></div>' : ''}
                         
                         ${state.guests.map(g => `
-                            <div class="bg-white border border-slate-100 p-4 rounded-3xl flex items-center gap-4 shadow-sm hover:shadow-md transition">
-                                <div class="w-12 h-12 rounded-[1rem] bg-indigo-50 flex items-center justify-center text-indigo-600 font-black text-lg">${g.name.charAt(0).toUpperCase()}</div>
+                            <div class="bg-white border border-slate-100 p-5 rounded-3xl flex items-center gap-5 shadow-sm hover:shadow-md transition group">
+                                <div class="w-14 h-14 rounded-2xl bg-indigo-50 flex items-center justify-center text-indigo-600 font-black text-2xl shadow-inner">${g.name.charAt(0).toUpperCase()}</div>
                                 <div class="flex-1 min-w-0">
-                                    <h4 class="font-extrabold text-sm text-slate-800 truncate">${g.name}</h4>
-                                    <p class="text-[10px] text-slate-500 font-semibold truncate mt-0.5">${g.agency}</p>
-                                    ${g.phone && g.phone !== '-' ? `<p class="text-[9px] text-slate-400 mt-1 flex items-center gap-1"><span class="material-icons" style="font-size: 10px;">call</span>${g.phone}</p>` : ''}
+                                    <h4 class="font-extrabold text-base text-slate-800 truncate">${g.name}</h4>
+                                    <p class="text-xs text-slate-500 font-semibold truncate mt-1">${g.agency}</p>
+                                    ${g.phone && g.phone !== '-' ? `<p class="text-[10px] text-slate-400 mt-1.5 flex items-center gap-1.5"><span class="material-icons" style="font-size: 12px;">call</span>${g.phone}</p>` : ''}
                                 </div>
-                                <div class="flex items-center gap-3 text-right">
+                                <div class="flex items-center gap-4 text-right border-l border-slate-100 pl-4">
                                     <div>
-                                        <span class="block text-[9px] font-black text-slate-400 uppercase">${g.date}</span>
-                                        <span class="block text-[10px] font-bold text-indigo-500 mt-0.5">${g.time}</span>
+                                        <span class="block text-[10px] font-black text-slate-400 uppercase tracking-wider">${g.date}</span>
+                                        <span class="block text-xs font-bold text-indigo-500 mt-1">${g.time}</span>
                                     </div>
-                                    <button onclick="hapusDataTamu('${g.id_firebase}')" class="p-2 text-red-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition">
-                                        <span class="material-icons text-lg">delete</span>
+                                    <button onclick="hapusDataTamu('${g.id_firebase}')" class="p-2.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition md:opacity-0 group-hover:opacity-100">
+                                        <span class="material-icons text-xl">delete</span>
                                     </button>
                                 </div>
                             </div>
@@ -365,24 +460,21 @@
                 </div>`
         };
 
-        // --- SISTEM HAPUS DATA (ADMIN ONLY) ---
+        // --- SISTEM HAPUS DATA ---
         async function hapusDataTamu(docId) {
             if(!navigator.onLine) return showToast("Internet terputus", "error");
-            if(!dbFirestore) return showToast("Database belum siap", "error");
             if(!confirm("Yakin ingin menghapus tamu ini permanen?")) return;
-            
             toggleLoader(true, "Menghapus Data...");
             try {
                 await dbFirestore.collection("tamu").doc(docId).delete();
                 state.guests = state.guests.filter(g => g.id_firebase !== docId);
                 router.render();
                 showToast("Data Terhapus");
-            } catch (error) { console.error(error); showToast("Gagal menghapus", "error"); } finally { toggleLoader(false); }
+            } catch (error) { showToast("Gagal menghapus", "error"); } finally { toggleLoader(false); }
         }
 
         async function hapusSemuaDataTamu() {
             if(!navigator.onLine) return showToast("Internet terputus", "error");
-            if(!dbFirestore) return showToast("Database belum siap", "error");
             const password = prompt("BAHAYA! Ketik 'HAPUS' untuk konfirmasi penghapusan seluruh database:");
             if (password !== 'HAPUS') return showToast("Penghapusan dibatalkan", "error");
 
@@ -395,7 +487,7 @@
                 state.guests = [];
                 router.render();
                 showToast("Semua Data Dikosongkan!");
-            } catch (error) { console.error(error); showToast("Gagal mengosongkan data", "error"); } finally { toggleLoader(false); }
+            } catch (error) { showToast("Gagal mengosongkan data", "error"); } finally { toggleLoader(false); }
         }
 
         // --- SISTEM PEMBUAT QR CODE ---
@@ -407,23 +499,30 @@
             new QRCode(el, { text, width: size, height: size, colorDark: "#1e1b4b", colorLight: "#ffffff", correctLevel: QRCode.CorrectLevel.H });
         }
 
-        // --- SISTEM TANDA TANGAN ---
+        // --- SISTEM TANDA TANGAN (RESPONSIVE RESIZE SUPPORT) ---
         let sigCanvas, sigCtx, drawing = false;
         function initSignature() {
             sigCanvas = document.getElementById('signature-pad');
             if(!sigCanvas) return;
             sigCtx = sigCanvas.getContext('2d');
+            
+            // Setup Responsive Width
             const rect = sigCanvas.getBoundingClientRect();
             sigCanvas.width = rect.width;
             sigCanvas.height = rect.height;
+            
             sigCtx.lineWidth = 3; sigCtx.lineCap = 'round'; sigCtx.lineJoin = 'round'; sigCtx.strokeStyle = '#4f46e5';
 
             const getPos = (e) => {
                 const r = sigCanvas.getBoundingClientRect();
                 const clientX = e.touches && e.touches.length > 0 ? e.touches[0].clientX : e.clientX;
                 const clientY = e.touches && e.touches.length > 0 ? e.touches[0].clientY : e.clientY;
-                return { x: clientX - r.left, y: clientY - r.top };
+                // Fix scaling issue on different pixel densities
+                const scaleX = sigCanvas.width / r.width;
+                const scaleY = sigCanvas.height / r.height;
+                return { x: (clientX - r.left) * scaleX, y: (clientY - r.top) * scaleY };
             };
+            
             const start = (e) => { e.preventDefault(); drawing = true; const p = getPos(e); sigCtx.beginPath(); sigCtx.moveTo(p.x, p.y); };
             const move = (e) => { if(!drawing) return; e.preventDefault(); const p = getPos(e); sigCtx.lineTo(p.x, p.y); sigCtx.stroke(); };
             const stop = (e) => { if(drawing) { e.preventDefault(); drawing = false; }};
@@ -432,6 +531,21 @@
             sigCanvas.addEventListener('touchstart', start, {passive: false}); sigCanvas.addEventListener('touchmove', move, {passive: false}); sigCanvas.addEventListener('touchend', stop);
         }
         function clearSig() { if(sigCtx) sigCtx.clearRect(0, 0, sigCanvas.width, sigCanvas.height); }
+
+        // Mencegah canvas rusak jika layar laptop di-resize/rotate
+        window.addEventListener('resize', () => {
+            if(state.view === 'form' && sigCanvas) {
+                const tempImage = sigCanvas.toDataURL(); // Simpan gambar sementara
+                const rect = sigCanvas.getBoundingClientRect();
+                sigCanvas.width = rect.width;
+                sigCanvas.height = rect.height;
+                sigCtx.lineWidth = 3; sigCtx.lineCap = 'round'; sigCtx.lineJoin = 'round'; sigCtx.strokeStyle = '#4f46e5';
+                
+                const img = new Image();
+                img.src = tempImage;
+                img.onload = () => sigCtx.drawImage(img, 0, 0); // Kembalikan gambar
+            }
+        });
 
         // --- SISTEM GRAFIK ---
         function initChart() {
@@ -442,12 +556,12 @@
                 return d.toISOString().split('T')[0];
             });
             const counts = last7Days.map(date => state.guests.filter(g => g.date === date).length);
-            const labels = ['H-6', 'H-5', 'H-4', 'H-3', 'H-2', 'H-1', 'Hr Ini'];
+            const labels = ['H-6', 'H-5', 'H-4', 'H-3', 'H-2', 'H-1', 'Hari Ini'];
 
             new Chart(ctx, {
                 type: 'line',
-                data: { labels: labels, datasets: [{ data: counts, borderColor: '#4f46e5', tension: 0.4, fill: true, backgroundColor: 'rgba(79, 70, 229, 0.1)', borderWidth: 3, pointRadius: 4, pointBackgroundColor: '#4f46e5' }] },
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { display: false }, x: { grid: { display: false }, ticks: { font: { size: 9, family: "'Plus Jakarta Sans', sans-serif" } } } } }
+                data: { labels: labels, datasets: [{ data: counts, borderColor: '#4f46e5', tension: 0.4, fill: true, backgroundColor: 'rgba(79, 70, 229, 0.1)', borderWidth: 3, pointRadius: 5, pointBackgroundColor: '#ffffff', pointBorderColor: '#4f46e5', pointBorderWidth: 2 }] },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { display: false }, x: { grid: { display: false }, ticks: { font: { size: 10, family: "'Plus Jakarta Sans', sans-serif" } } } } }
             });
         }
 
@@ -457,7 +571,6 @@
             const sigData = sigCanvas.toDataURL();
             if (sigData.length < 2000) return showToast("Tanda tangan wajib diisi!", "error");
             if (!navigator.onLine) return showToast("Gagal! Anda offline.", "error");
-            if (!dbFirestore) return showToast("Database tidak terhubung", "error");
             
             toggleLoader(true, "Mengunggah Data...");
             const guest = {
@@ -476,12 +589,11 @@
                 const docRef = await dbFirestore.collection("tamu").add(guest);
                 guest.id_firebase = docRef.id; 
                 
-                if(!isGuestMode) { state.guests.unshift(guest); }
+                if(state.isAdmin) { state.guests.unshift(guest); }
                 router.navigate('success', guest);
                 
             } catch (error) { 
-                console.error(error); 
-                showToast("Gagal mendaftar", "error"); 
+                console.error(error); showToast("Gagal mendaftar", "error"); 
             } finally { 
                 toggleLoader(false); 
             }
@@ -577,23 +689,22 @@
             const b = document.getElementById('status-badge');
             const isO = navigator.onLine;
             b.innerText = isO ? "Online Server" : "Offline";
-            b.className = `px-2 py-1 ${isO ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'} text-[8px] font-black rounded-md transition-all uppercase shadow-sm`;
+            b.className = `px-3 py-1 ${isO ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'} text-[9px] font-black rounded-lg transition-all uppercase shadow-sm hidden sm:block border border-transparent ${isO?'border-green-200':'border-red-200'}`;
         }
 
         // --- INITIALIZATION ---
         window.onload = () => {
-            if (isGuestMode) {
-                // Sembunyikan navigasi admin jika tamu yang buka (Isolasi)
-                document.getElementById('main-nav').style.display = 'none';
-                document.getElementById('menu-btn').style.display = 'none';
-                router.navigate('form');
+            let initView = window.location.hash.substring(1);
+            if (!state.isAdmin) {
+                router.navigate('form'); // Paksa ke form jika bukan admin
             } else {
                 fetchDataDariFirebase();
-                const initView = window.location.hash.substring(1) || 'dashboard';
-                // Cegah admin nyangkut di halaman success tanpa data
-                router.navigate(initView === 'success' ? 'dashboard' : initView);
+                if (!initView || initView === 'success') initView = 'dashboard';
+                router.navigate(initView);
             }
-            updateOnlineStatus(); window.addEventListener('online', updateOnlineStatus); window.addEventListener('offline', updateOnlineStatus);
+            updateOnlineStatus(); 
+            window.addEventListener('online', updateOnlineStatus); 
+            window.addEventListener('offline', updateOnlineStatus);
         };
     </script>
 </body>
