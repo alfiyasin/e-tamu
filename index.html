@@ -40,9 +40,9 @@
 <body>
 
     <!-- LAYER LOADING -->
-    <div id="loader" class="loading-overlay">
+    <div id="loader" class="loading-overlay hidden">
         <div class="w-12 h-12 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
-        <p id="loader-text" class="mt-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Menyiapkan Sistem...</p>
+        <p id="loader-text" class="mt-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Processing...</p>
     </div>
 
     <div class="app-shell relative" id="app-shell">
@@ -59,7 +59,6 @@
             </div>
             <div class="flex items-center gap-2">
                 <div id="status-badge" class="px-2 py-1 bg-slate-100 text-[8px] font-black rounded-md uppercase">...</div>
-                <!-- Tombol Menu Hanya untuk Admin -->
                 <button id="menu-btn" onclick="toggleMenu(event)" class="w-8 h-8 flex items-center justify-center bg-slate-50 hover:bg-slate-100 rounded-lg text-slate-600 transition">
                     <span class="material-icons text-xl pointer-events-none">widgets</span>
                 </button>
@@ -109,32 +108,36 @@
 
     <script>
         // =========================================================
-        // SETUP FIREBASE DATABASE
-        // GANTI BAGIAN INI DENGAN KODE FIREBASE ANDA
+        // SETUP FIREBASE DATABASE MILIK ANDA
         // =========================================================
-        const firebaseConfig = {
-            apiKey: "AIzaSyCoNcCneR5g19dTRY7zAZzL53fCeOvpsCg",
-            authDomain: "e-tamu-smk-queen.firebaseapp.com",
-            projectId: "e-tamu-smk-queen",
-            storageBucket: "e-tamu-smk-queen.firebasestorage.app",
-            messagingSenderId: "948856871318",
-            appId: "1:948856871318:web:7b5cad269762ced6f525b7"
-        };
-        firebase.initializeApp(firebaseConfig);
-        const dbFirestore = firebase.firestore();
+        let dbFirestore = null;
+        try {
+            const firebaseConfig = {
+                apiKey: "AIzaSyCoNcCneR5g19dTRY7zAZzL53fCeOvpsCg",
+                authDomain: "e-tamu-smk-queen.firebaseapp.com",
+                projectId: "e-tamu-smk-queen",
+                storageBucket: "e-tamu-smk-queen.firebasestorage.app",
+                messagingSenderId: "948856871318",
+                appId: "1:948856871318:web:7b5cad269762ced6f525b7"
+            };
+            firebase.initializeApp(firebaseConfig);
+            dbFirestore = firebase.firestore();
+        } catch (error) {
+            console.error("Firebase Config Error:", error);
+        }
 
         // =========================================================
-        // STATE & DETEKSI GUEST MODE SUPER KETAT
+        // STATE & DETEKSI GUEST MODE
         // =========================================================
         let state = { view: 'dashboard', guests: [] };
         
-        // Membaca URL parameters: jika ada ?tamu=true, maka kunci aplikasi
+        // Membaca URL parameters: jika ada ?tamu=true, maka kunci aplikasi (Mode Tamu)
         const urlParams = new URLSearchParams(window.location.search);
         const isGuestMode = urlParams.get('tamu') === 'true';
 
         // --- PENGAMBILAN DATA CLOUD (HANYA ADMIN) ---
         async function fetchDataDariFirebase() {
-            if (isGuestMode) return; 
+            if (isGuestMode || !dbFirestore) return; 
             
             toggleLoader(true, "Mengunduh Data...");
             try {
@@ -146,64 +149,72 @@
                     router.render(); 
                 }
             } catch (error) {
-                console.error(error);
-                showToast("Gagal Terhubung Database", "error");
+                console.error("Fetch error:", error);
             } finally {
                 toggleLoader(false);
             }
         }
 
-        // --- SISTEM ROUTER ADMIN ---
+        // --- SISTEM ROUTER TUNGGAL (ANTI NYANGKUT) ---
         const router = {
-            navigate: (view) => {
-                if (isGuestMode) return; // Tamu tidak bisa pakai fungsi router ini
+            navigate: (view, extra = null) => {
+                // Proteksi: Jika tamu, hanya boleh buka form atau success
+                if (isGuestMode && view !== 'form' && view !== 'success') return; 
+                
                 window.location.hash = view; 
                 state.view = view;
-                router.render();
+                router.render(extra);
                 closeMenu();
             },
-            render: () => {
-                if (isGuestMode) return; // Proteksi ganda
-
+            render: (extraData) => {
                 const content = document.getElementById('app-content');
-                document.getElementById('nav-dashboard').className = `flex flex-col items-center transition ${state.view === 'dashboard' ? 'text-indigo-600' : 'text-slate-400'}`;
-                document.getElementById('nav-history').className = `flex flex-col items-center transition ${state.view === 'history' ? 'text-indigo-600' : 'text-slate-400'}`;
+                
+                // UI Navigasi Khusus Admin
+                if(!isGuestMode) {
+                    const navDash = document.getElementById('nav-dashboard');
+                    const navHist = document.getElementById('nav-history');
+                    if(navDash) navDash.className = `flex flex-col items-center transition ${state.view === 'dashboard' ? 'text-indigo-600' : 'text-slate-400'}`;
+                    if(navHist) navHist.className = `flex flex-col items-center transition ${state.view === 'history' ? 'text-indigo-600' : 'text-slate-400'}`;
+                }
 
-                if (state.view === 'dashboard') {
+                // Render Sesuai Halaman
+                if (state.view === 'dashboard' && !isGuestMode) {
                     content.innerHTML = views.dashboard();
-                    
-                    // MEMBUAT URL QR CODE YANG BENAR (Pasti terbaca kamera HP)
-                    const baseUrl = window.location.origin + window.location.pathname;
-                    const qrUrl = baseUrl + "?tamu=true"; 
+                    // URL QR CODE PASTI TEMBUS KE FORM
+                    const cleanUrl = window.location.href.split('#')[0].split('?')[0];
+                    const qrUrl = cleanUrl + "?tamu=true"; 
                     setTimeout(() => { initChart(); generateQR("school-qr", qrUrl, 140); }, 100);
 
-                } else if (state.view === 'form') {
+                } 
+                else if (state.view === 'form') {
                     content.innerHTML = views.form();
                     setTimeout(initSignature, 100);
 
-                } else if (state.view === 'history') {
+                } 
+                else if (state.view === 'success') {
+                    // Jika refresh di halaman success, kembalikan ke form/dashboard agar tidak error
+                    if (!extraData) return router.navigate(isGuestMode ? 'form' : 'dashboard');
+                    
+                    content.innerHTML = views.success(extraData);
+                    setTimeout(() => generateQR("visitor-qr", extraData.id, 140), 100);
+
+                } 
+                else if (state.view === 'history' && !isGuestMode) {
                     content.innerHTML = views.history();
+                } 
+                else {
+                    // Fallback jika terjadi error URL
+                    router.navigate(isGuestMode ? 'form' : 'dashboard');
                 }
             }
         };
 
-        // --- RENDERER KHUSUS TAMU (ISOLASI TOTAL) ---
-        function renderGuestMode(mode, data = null) {
-            const content = document.getElementById('app-content');
-            if (mode === 'form') {
-                content.innerHTML = views.form();
-                setTimeout(initSignature, 100);
-            } else if (mode === 'success') {
-                content.innerHTML = views.success(data);
-                setTimeout(() => generateQR("visitor-qr", data.id, 140), 100);
-            }
-        }
-
-        // Listener Hash URL (Hanya untuk Admin)
+        // Deteksi tombol kembali (Back) di HP
         window.addEventListener('hashchange', () => {
-            if (isGuestMode) return; // Abaikan perubahan link jika ini adalah tamu
+            if (isGuestMode) return; // Tamu tidak bisa pakai tombol back
             const hashView = window.location.hash.substring(1) || 'dashboard';
             if (state.view !== hashView) {
+                if(hashView === 'success') return router.navigate('dashboard');
                 state.view = hashView;
                 router.render();
             }
@@ -356,19 +367,22 @@
 
         // --- SISTEM HAPUS DATA (ADMIN ONLY) ---
         async function hapusDataTamu(docId) {
-            if(!navigator.onLine) return showToast("Tidak ada koneksi internet", "error");
+            if(!navigator.onLine) return showToast("Internet terputus", "error");
+            if(!dbFirestore) return showToast("Database belum siap", "error");
             if(!confirm("Yakin ingin menghapus tamu ini permanen?")) return;
+            
             toggleLoader(true, "Menghapus Data...");
             try {
                 await dbFirestore.collection("tamu").doc(docId).delete();
                 state.guests = state.guests.filter(g => g.id_firebase !== docId);
                 router.render();
                 showToast("Data Terhapus");
-            } catch (error) { showToast("Gagal menghapus", "error"); } finally { toggleLoader(false); }
+            } catch (error) { console.error(error); showToast("Gagal menghapus", "error"); } finally { toggleLoader(false); }
         }
 
         async function hapusSemuaDataTamu() {
-            if(!navigator.onLine) return showToast("Tidak ada koneksi internet", "error");
+            if(!navigator.onLine) return showToast("Internet terputus", "error");
+            if(!dbFirestore) return showToast("Database belum siap", "error");
             const password = prompt("BAHAYA! Ketik 'HAPUS' untuk konfirmasi penghapusan seluruh database:");
             if (password !== 'HAPUS') return showToast("Penghapusan dibatalkan", "error");
 
@@ -381,7 +395,7 @@
                 state.guests = [];
                 router.render();
                 showToast("Semua Data Dikosongkan!");
-            } catch (error) { showToast("Gagal mengosongkan data", "error"); } finally { toggleLoader(false); }
+            } catch (error) { console.error(error); showToast("Gagal mengosongkan data", "error"); } finally { toggleLoader(false); }
         }
 
         // --- SISTEM PEMBUAT QR CODE ---
@@ -442,7 +456,8 @@
             e.preventDefault();
             const sigData = sigCanvas.toDataURL();
             if (sigData.length < 2000) return showToast("Tanda tangan wajib diisi!", "error");
-            if (!navigator.onLine) return showToast("Gagal! Anda sedang offline.", "error");
+            if (!navigator.onLine) return showToast("Gagal! Anda offline.", "error");
+            if (!dbFirestore) return showToast("Database tidak terhubung", "error");
             
             toggleLoader(true, "Mengunggah Data...");
             const guest = {
@@ -461,18 +476,15 @@
                 const docRef = await dbFirestore.collection("tamu").add(guest);
                 guest.id_firebase = docRef.id; 
                 
-                if(!isGuestMode) {
-                    state.guests.unshift(guest);
-                }
+                if(!isGuestMode) { state.guests.unshift(guest); }
+                router.navigate('success', guest);
                 
-                // Jika tamu yang mengisi, panggil renderGuestMode (isolasi dari router utama)
-                if(isGuestMode) {
-                    renderGuestMode('success', guest);
-                } else {
-                    router.navigate('success', guest);
-                }
-                
-            } catch (error) { showToast("Gagal mendaftar", "error"); } finally { toggleLoader(false); }
+            } catch (error) { 
+                console.error(error); 
+                showToast("Gagal mendaftar", "error"); 
+            } finally { 
+                toggleLoader(false); 
+            }
         }
 
         // --- KONTROL MENU & ACTION ---
@@ -489,7 +501,7 @@
             if(a === 'word') exportWord();
         }
 
-        // --- SISTEM EXPORT (DENGAN TANDA TANGAN ANTI CRASH) ---
+        // --- SISTEM EXPORT ---
         function exportExcel() {
             if(!state.guests.length) return showToast("Data Kosong", "error");
             let csv = "ID,TANGGAL,WAKTU,NAMA,INSTANSI,NO_HP,KEPERLUAN,TANDA_TANGAN\n";
@@ -517,7 +529,7 @@
                     new TableRow({ children: [
                         new TableCell({children:[new Paragraph({children:[new TextRun({text:"TGL/WAKTU", bold:true})]})]}), 
                         new TableCell({children:[new Paragraph({children:[new TextRun({text:"NAMA", bold:true})]})]}), 
-                        new TableCell({children:[new Paragraph({children:[new TextRun({text:"INSTANSI/NO HP", bold:true})]})]}),
+                        new TableCell({children:[new Paragraph({children:[new TextRun({text:"INSTANSI / NO HP", bold:true})]})]}),
                         new TableCell({children:[new Paragraph({children:[new TextRun({text:"KEPERLUAN", bold:true})]})]}),
                         new TableCell({children:[new Paragraph({children:[new TextRun({text:"TTD", bold:true})]})]})
                     ]})
@@ -571,13 +583,14 @@
         // --- INITIALIZATION ---
         window.onload = () => {
             if (isGuestMode) {
-                // ISOLASI TOTAL UNTUK TAMU (Matikan semua navigasi admin)
+                // Sembunyikan navigasi admin jika tamu yang buka (Isolasi)
                 document.getElementById('main-nav').style.display = 'none';
                 document.getElementById('menu-btn').style.display = 'none';
-                renderGuestMode('form');
+                router.navigate('form');
             } else {
                 fetchDataDariFirebase();
                 const initView = window.location.hash.substring(1) || 'dashboard';
+                // Cegah admin nyangkut di halaman success tanpa data
                 router.navigate(initView === 'success' ? 'dashboard' : initView);
             }
             updateOnlineStatus(); window.addEventListener('online', updateOnlineStatus); window.addEventListener('offline', updateOnlineStatus);
