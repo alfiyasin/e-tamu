@@ -110,6 +110,7 @@
     <script>
         // =========================================================
         // SETUP FIREBASE DATABASE
+        // GANTI BAGIAN INI DENGAN KODE FIREBASE ANDA
         // =========================================================
         const firebaseConfig = {
             apiKey: "AIzaSyCoNcCneR5g19dTRY7zAZzL53fCeOvpsCg",
@@ -123,13 +124,15 @@
         const dbFirestore = firebase.firestore();
 
         // =========================================================
-        // STATE & DETEKSI GUEST MODE
+        // STATE & DETEKSI GUEST MODE SUPER KETAT
         // =========================================================
         let state = { view: 'dashboard', guests: [] };
+        
+        // Membaca URL parameters: jika ada ?tamu=true, maka kunci aplikasi
         const urlParams = new URLSearchParams(window.location.search);
-        const isGuestMode = urlParams.get('mode') === 'guest';
+        const isGuestMode = urlParams.get('tamu') === 'true';
 
-        // --- SISTEM PENGAMBILAN DATA (HANYA UNTUK ADMIN) ---
+        // --- PENGAMBILAN DATA CLOUD (HANYA ADMIN) ---
         async function fetchDataDariFirebase() {
             if (isGuestMode) return; 
             
@@ -140,7 +143,7 @@
                 snapshot.forEach(doc => { data.push({ id_firebase: doc.id, ...doc.data() }); });
                 state.guests = data;
                 if (state.view === 'dashboard' || state.view === 'history') {
-                    router.render(null); 
+                    router.render(); 
                 }
             } catch (error) {
                 console.error(error);
@@ -150,48 +153,57 @@
             }
         }
 
-        // --- SISTEM ROUTER ---
+        // --- SISTEM ROUTER ADMIN ---
         const router = {
-            navigate: (view, extra = null) => {
-                if(isGuestMode && view !== 'form' && view !== 'success') return; 
+            navigate: (view) => {
+                if (isGuestMode) return; // Tamu tidak bisa pakai fungsi router ini
                 window.location.hash = view; 
                 state.view = view;
-                router.render(extra);
+                router.render();
                 closeMenu();
             },
-            render: (extraData) => {
-                const content = document.getElementById('app-content');
-                
-                if(!isGuestMode) {
-                    document.getElementById('nav-dashboard').className = `flex flex-col items-center transition ${state.view === 'dashboard' ? 'text-indigo-600' : 'text-slate-400'}`;
-                    document.getElementById('nav-history').className = `flex flex-col items-center transition ${state.view === 'history' ? 'text-indigo-600' : 'text-slate-400'}`;
-                }
+            render: () => {
+                if (isGuestMode) return; // Proteksi ganda
 
-                if (state.view === 'dashboard' && !isGuestMode) {
+                const content = document.getElementById('app-content');
+                document.getElementById('nav-dashboard').className = `flex flex-col items-center transition ${state.view === 'dashboard' ? 'text-indigo-600' : 'text-slate-400'}`;
+                document.getElementById('nav-history').className = `flex flex-col items-center transition ${state.view === 'history' ? 'text-indigo-600' : 'text-slate-400'}`;
+
+                if (state.view === 'dashboard') {
                     content.innerHTML = views.dashboard();
-                    const cleanUrl = window.location.href.split('#')[0].split('?')[0];
-                    const qrUrl = cleanUrl + "?mode=guest"; 
+                    
+                    // MEMBUAT URL QR CODE YANG BENAR (Pasti terbaca kamera HP)
+                    const baseUrl = window.location.origin + window.location.pathname;
+                    const qrUrl = baseUrl + "?tamu=true"; 
                     setTimeout(() => { initChart(); generateQR("school-qr", qrUrl, 140); }, 100);
 
                 } else if (state.view === 'form') {
                     content.innerHTML = views.form();
                     setTimeout(initSignature, 100);
 
-                } else if (state.view === 'success') {
-                    if (!extraData) return router.navigate(isGuestMode ? 'form' : 'dashboard');
-                    content.innerHTML = views.success(extraData);
-                    setTimeout(() => generateQR("visitor-qr", extraData.id, 140), 100);
-
-                } else if (state.view === 'history' && !isGuestMode) {
+                } else if (state.view === 'history') {
                     content.innerHTML = views.history();
                 }
             }
         };
 
+        // --- RENDERER KHUSUS TAMU (ISOLASI TOTAL) ---
+        function renderGuestMode(mode, data = null) {
+            const content = document.getElementById('app-content');
+            if (mode === 'form') {
+                content.innerHTML = views.form();
+                setTimeout(initSignature, 100);
+            } else if (mode === 'success') {
+                content.innerHTML = views.success(data);
+                setTimeout(() => generateQR("visitor-qr", data.id, 140), 100);
+            }
+        }
+
+        // Listener Hash URL (Hanya untuk Admin)
         window.addEventListener('hashchange', () => {
+            if (isGuestMode) return; // Abaikan perubahan link jika ini adalah tamu
             const hashView = window.location.hash.substring(1) || 'dashboard';
             if (state.view !== hashView) {
-                if(hashView === 'success') { window.location.hash = isGuestMode ? 'form' : 'dashboard'; return; }
                 state.view = hashView;
                 router.render();
             }
@@ -217,7 +229,7 @@
                     <div class="bg-white border border-slate-100 p-6 rounded-[2rem] text-center shadow-sm">
                         <h4 class="text-xs font-extrabold text-slate-800 mb-4 uppercase tracking-widest">QR CODE PENDAFTARAN</h4>
                         <div id="school-qr" class="qr-container bg-white p-3 border-4 border-slate-50 rounded-2xl inline-block mb-3"></div>
-                        <p class="text-[10px] font-black text-indigo-500 uppercase tracking-widest">Arahkan Kamera HP Kesini</p>
+                        <p class="text-[10px] font-black text-indigo-500 uppercase tracking-widest">Arahkan Kamera HP Tamu Kesini</p>
                     </div>
 
                     <div class="grid grid-cols-2 gap-4">
@@ -307,7 +319,7 @@
                         </div>
                     </div>
                     
-                    ${!isGuestMode ? `<button onclick="router.navigate('dashboard')" class="w-full py-4 mt-2 text-slate-400 hover:text-indigo-600 transition font-black text-[10px] uppercase tracking-widest">Selesai & Kembali</button>` : `<p class="text-center text-[9px] text-slate-400 font-bold mt-4 uppercase">Silakan tutup halaman web ini.</p>`}
+                    ${!isGuestMode ? `<button onclick="router.navigate('dashboard')" class="w-full py-4 mt-2 text-slate-400 hover:text-indigo-600 transition font-black text-[10px] uppercase tracking-widest">Selesai & Kembali</button>` : `<div class="mt-6 text-center"><span class="material-icons text-slate-300 text-3xl">task_alt</span><p class="text-[10px] text-slate-400 font-bold mt-2 uppercase tracking-widest">Silakan tutup halaman ini.</p></div>`}
                 </div>`,
             
             history: () => `
@@ -342,7 +354,7 @@
                 </div>`
         };
 
-        // --- SISTEM HAPUS DATA ---
+        // --- SISTEM HAPUS DATA (ADMIN ONLY) ---
         async function hapusDataTamu(docId) {
             if(!navigator.onLine) return showToast("Tidak ada koneksi internet", "error");
             if(!confirm("Yakin ingin menghapus tamu ini permanen?")) return;
@@ -448,8 +460,18 @@
             try {
                 const docRef = await dbFirestore.collection("tamu").add(guest);
                 guest.id_firebase = docRef.id; 
-                state.guests.unshift(guest);
-                router.navigate('success', guest);
+                
+                if(!isGuestMode) {
+                    state.guests.unshift(guest);
+                }
+                
+                // Jika tamu yang mengisi, panggil renderGuestMode (isolasi dari router utama)
+                if(isGuestMode) {
+                    renderGuestMode('success', guest);
+                } else {
+                    router.navigate('success', guest);
+                }
+                
             } catch (error) { showToast("Gagal mendaftar", "error"); } finally { toggleLoader(false); }
         }
 
@@ -467,8 +489,7 @@
             if(a === 'word') exportWord();
         }
 
-        // --- SISTEM EXPORT (TERMASUK GAMBAR TANDA TANGAN DI WORD) ---
-        // --- SISTEM EXPORT (DENGAN TANDA TANGAN ANTI-CRASH) ---
+        // --- SISTEM EXPORT (DENGAN TANDA TANGAN ANTI CRASH) ---
         function exportExcel() {
             if(!state.guests.length) return showToast("Data Kosong", "error");
             let csv = "ID,TANGGAL,WAKTU,NAMA,INSTANSI,NO_HP,KEPERLUAN,TANDA_TANGAN\n";
@@ -477,89 +498,57 @@
             showToast("Excel Berhasil Diunduh");
         }
 
-        // Fungsi Converter Gambar Super Aman
         function convertDataURIToBinary(dataURI) {
             const base64Index = dataURI.indexOf(';base64,') + ';base64,'.length;
             const base64 = dataURI.substring(base64Index);
             const raw = window.atob(base64);
             const rawLength = raw.length;
             const array = new Uint8Array(new ArrayBuffer(rawLength));
-            for(let i = 0; i < rawLength; i++) {
-                array[i] = raw.charCodeAt(i);
-            }
+            for(let i = 0; i < rawLength; i++) array[i] = raw.charCodeAt(i);
             return array;
         }
 
         async function exportWord() {
             if(!state.guests.length) return showToast("Data Kosong", "error");
             toggleLoader(true, "Menyusun Docx...");
-            
             try {
                 const { Document, Packer, Paragraph, Table, TableRow, TableCell, WidthType, TextRun, ImageRun, AlignmentType } = docx;
-                
                 const rows = [
                     new TableRow({ children: [
                         new TableCell({children:[new Paragraph({children:[new TextRun({text:"TGL/WAKTU", bold:true})]})]}), 
                         new TableCell({children:[new Paragraph({children:[new TextRun({text:"NAMA", bold:true})]})]}), 
-                        new TableCell({children:[new Paragraph({children:[new TextRun({text:"INSTANSI", bold:true})]})]}),
+                        new TableCell({children:[new Paragraph({children:[new TextRun({text:"INSTANSI/NO HP", bold:true})]})]}),
                         new TableCell({children:[new Paragraph({children:[new TextRun({text:"KEPERLUAN", bold:true})]})]}),
-                        new TableCell({children:[new Paragraph({children:[new TextRun({text:"TANDA TANGAN", bold:true})]})]})
+                        new TableCell({children:[new Paragraph({children:[new TextRun({text:"TTD", bold:true})]})]})
                     ]})
                 ];
 
                 state.guests.forEach(g => {
                     let signatureRender;
-                    
-                    // Cek ketat apakah data signature valid
                     if (g.signature && g.signature.startsWith('data:image')) {
                         try {
                             const imageArray = convertDataURIToBinary(g.signature);
                             signatureRender = new Paragraph({
-                                children: [
-                                    new ImageRun({
-                                        data: imageArray,
-                                        transformation: { width: 80, height: 40 }
-                                    })
-                                ],
+                                children: [ new ImageRun({ data: imageArray, transformation: { width: 60, height: 30 } }) ],
                                 alignment: AlignmentType.CENTER
                             });
-                        } catch (err) {
-                            console.error("Gagal Render Gambar:", err);
-                            signatureRender = new Paragraph({children: [new TextRun({text: "Ttd Rusak", italics: true})]});
-                        }
-                    } else { 
-                        signatureRender = new Paragraph({children: [new TextRun({text: "Tidak Ada", italics: true})]}); 
-                    }
+                        } catch (err) { signatureRender = new Paragraph("Ttd Rusak"); }
+                    } else { signatureRender = new Paragraph("-"); }
 
                     rows.push(new TableRow({ children: [
                         new TableCell({children:[new Paragraph(`${g.date}\n${g.time}`)]}), 
                         new TableCell({children:[new Paragraph(g.name)]}), 
-                        new TableCell({children:[new Paragraph(g.agency)]}), 
+                        new TableCell({children:[new Paragraph(`${g.agency}\n${g.phone}`)]}), 
                         new TableCell({children:[new Paragraph(g.purpose)]}),
-                        new TableCell({children:[signatureRender]}) 
+                        new TableCell({children:[signatureRender]})
                     ]}));
                 });
 
-                const doc = new Document({ 
-                    sections: [{ 
-                        children: [
-                            new Paragraph({text:"LAPORAN BUKU TAMU SMK QUEEN AL-FALAH", heading:"Heading1"}), 
-                            new Paragraph({text:"\n"}), 
-                            new Table({width:{size:100, type:WidthType.PERCENTAGE}, rows: rows})
-                        ] 
-                    }] 
-                });
-                
+                const doc = new Document({ sections: [{ children: [new Paragraph({text:"LAPORAN BUKU TAMU SMK QUEEN AL-FALAH", heading:"Heading1"}), new Paragraph({text:"\n"}), new Table({width:{size:100, type:WidthType.PERCENTAGE}, rows})] }] });
                 const blob = await Packer.toBlob(doc);
                 saveAs(blob, `Laporan_Tamu_${new Date().getTime()}.docx`);
                 showToast("Word Berhasil Diunduh");
-                
-            } catch(e) { 
-                console.error("Fatal Error Export Word:", e); 
-                showToast("Sistem Word Error", "error"); 
-            } finally { 
-                toggleLoader(false); 
-            }
+            } catch(e) { console.error(e); showToast("Gagal Buat File", "error"); } finally { toggleLoader(false); }
         }
         
         // --- UI UTILS ---
@@ -582,9 +571,10 @@
         // --- INITIALIZATION ---
         window.onload = () => {
             if (isGuestMode) {
+                // ISOLASI TOTAL UNTUK TAMU (Matikan semua navigasi admin)
                 document.getElementById('main-nav').style.display = 'none';
                 document.getElementById('menu-btn').style.display = 'none';
-                router.navigate('form');
+                renderGuestMode('form');
             } else {
                 fetchDataDariFirebase();
                 const initView = window.location.hash.substring(1) || 'dashboard';
