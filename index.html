@@ -468,6 +468,7 @@
         }
 
         // --- SISTEM EXPORT (TERMASUK GAMBAR TANDA TANGAN DI WORD) ---
+        // --- SISTEM EXPORT (DENGAN TANDA TANGAN ANTI-CRASH) ---
         function exportExcel() {
             if(!state.guests.length) return showToast("Data Kosong", "error");
             let csv = "ID,TANGGAL,WAKTU,NAMA,INSTANSI,NO_HP,KEPERLUAN,TANDA_TANGAN\n";
@@ -476,19 +477,26 @@
             showToast("Excel Berhasil Diunduh");
         }
 
-        function base64ToUint8Array(base64) {
-            const base64String = base64.split(',')[1];
-            const binaryString = window.atob(base64String);
-            const bytes = new Uint8Array(binaryString.length);
-            for (let i = 0; i < binaryString.length; i++) bytes[i] = binaryString.charCodeAt(i);
-            return bytes;
+        // Fungsi Converter Gambar Super Aman
+        function convertDataURIToBinary(dataURI) {
+            const base64Index = dataURI.indexOf(';base64,') + ';base64,'.length;
+            const base64 = dataURI.substring(base64Index);
+            const raw = window.atob(base64);
+            const rawLength = raw.length;
+            const array = new Uint8Array(new ArrayBuffer(rawLength));
+            for(let i = 0; i < rawLength; i++) {
+                array[i] = raw.charCodeAt(i);
+            }
+            return array;
         }
 
         async function exportWord() {
             if(!state.guests.length) return showToast("Data Kosong", "error");
             toggleLoader(true, "Menyusun Docx...");
+            
             try {
                 const { Document, Packer, Paragraph, Table, TableRow, TableCell, WidthType, TextRun, ImageRun, AlignmentType } = docx;
+                
                 const rows = [
                     new TableRow({ children: [
                         new TableCell({children:[new Paragraph({children:[new TextRun({text:"TGL/WAKTU", bold:true})]})]}), 
@@ -501,15 +509,27 @@
 
                 state.guests.forEach(g => {
                     let signatureRender;
-                    if (g.signature && g.signature.includes('base64')) {
+                    
+                    // Cek ketat apakah data signature valid
+                    if (g.signature && g.signature.startsWith('data:image')) {
                         try {
-                            const imageBuffer = base64ToUint8Array(g.signature);
+                            const imageArray = convertDataURIToBinary(g.signature);
                             signatureRender = new Paragraph({
-                                children: [ new ImageRun({ data: imageBuffer, transformation: { width: 80, height: 40 }, type: "png" }) ],
+                                children: [
+                                    new ImageRun({
+                                        data: imageArray,
+                                        transformation: { width: 80, height: 40 }
+                                    })
+                                ],
                                 alignment: AlignmentType.CENTER
                             });
-                        } catch (err) { signatureRender = new Paragraph("Error TTD"); }
-                    } else { signatureRender = new Paragraph("-"); }
+                        } catch (err) {
+                            console.error("Gagal Render Gambar:", err);
+                            signatureRender = new Paragraph({children: [new TextRun({text: "Ttd Rusak", italics: true})]});
+                        }
+                    } else { 
+                        signatureRender = new Paragraph({children: [new TextRun({text: "Tidak Ada", italics: true})]}); 
+                    }
 
                     rows.push(new TableRow({ children: [
                         new TableCell({children:[new Paragraph(`${g.date}\n${g.time}`)]}), 
@@ -520,11 +540,26 @@
                     ]}));
                 });
 
-                const doc = new Document({ sections: [{ children: [new Paragraph({text:"LAPORAN BUKU TAMU SMK QUEEN AL-FALAH", heading:"Heading1"}), new Paragraph({text:"\n"}), new Table({width:{size:100, type:WidthType.PERCENTAGE}, rows})] }] });
+                const doc = new Document({ 
+                    sections: [{ 
+                        children: [
+                            new Paragraph({text:"LAPORAN BUKU TAMU SMK QUEEN AL-FALAH", heading:"Heading1"}), 
+                            new Paragraph({text:"\n"}), 
+                            new Table({width:{size:100, type:WidthType.PERCENTAGE}, rows: rows})
+                        ] 
+                    }] 
+                });
+                
                 const blob = await Packer.toBlob(doc);
                 saveAs(blob, `Laporan_Tamu_${new Date().getTime()}.docx`);
                 showToast("Word Berhasil Diunduh");
-            } catch(e) { console.error(e); showToast("Gagal Buat File", "error"); } finally { toggleLoader(false); }
+                
+            } catch(e) { 
+                console.error("Fatal Error Export Word:", e); 
+                showToast("Sistem Word Error", "error"); 
+            } finally { 
+                toggleLoader(false); 
+            }
         }
         
         // --- UI UTILS ---
