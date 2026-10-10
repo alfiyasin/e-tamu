@@ -2,7 +2,6 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <!-- Viewport fit=cover sangat penting untuk mengatasi bug layar terpotong di HP/Tablet -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>E-Tamu Digital - SMK Queen Al-Falah</title>
     
@@ -21,57 +20,17 @@
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
 
     <style>
-        body { 
-            font-family: 'Plus Jakarta Sans', sans-serif; 
-            background-color: #f1f5f9; 
-            background-image: radial-gradient(#cbd5e1 1px, transparent 1px);
-            background-size: 20px 20px;
-            overflow: hidden; 
-            -webkit-tap-highlight-color: transparent; 
-        }
-
-        /* PERBAIKAN BUG HP/TABLET: Menggunakan 100dvh (Dynamic Viewport Height) */
-        .app-shell { 
-            width: 100%; max-width: 100%; background: white; 
-            height: 100vh; height: 100dvh; 
-            display: flex; flex-direction: column; transition: all 0.3s ease;
-        }
-
-        @media (min-width: 768px) {
-            .app-shell {
-                max-width: 800px; height: 92vh; margin: 4vh auto;
-                border-radius: 32px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);
-                border: 1px solid #e2e8f0; overflow: hidden;
-            }
-        }
-
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #f1f5f9; background-image: radial-gradient(#cbd5e1 1px, transparent 1px); background-size: 20px 20px; overflow: hidden; -webkit-tap-highlight-color: transparent; }
+        .app-shell { width: 100%; max-width: 100%; background: white; height: 100vh; height: 100dvh; display: flex; flex-direction: column; transition: all 0.3s ease; }
+        @media (min-width: 768px) { .app-shell { max-width: 800px; height: 92vh; margin: 4vh auto; border-radius: 32px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); border: 1px solid #e2e8f0; overflow: hidden; } }
         .main-content { flex: 1; overflow-y: auto; padding: 20px; padding-bottom: 100px; scroll-behavior: smooth; }
-        .main-content::-webkit-scrollbar { width: 4px; }
-        .main-content::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
-        
-        /* PERBAIKAN TOTAL NAVIGASI BAWAH */
-        .nav-bar { 
-            height: 70px; background: white; border-top: 1px solid #e2e8f0; 
-            display: grid; grid-template-columns: 1fr 1fr 1fr; /* Membagi layar rata menjadi 3 tanpa tumpang tindih */
-            position: relative; z-index: 40; 
-            padding-bottom: env(safe-area-inset-bottom); /* Mencegah tombol tertutup garis navigasi iPhone/Android */
-        }
-        
-        .nav-btn {
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            width: 100%; height: 100%; cursor: pointer; user-select: none;
-        }
-
+        .main-content::-webkit-scrollbar { width: 0px; }
+        .nav-bar { height: 70px; background: white; border-top: 1px solid #e2e8f0; display: grid; grid-template-columns: 1fr 1fr 1fr; position: relative; z-index: 40; padding-bottom: env(safe-area-inset-bottom); }
+        .nav-btn { display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; height: 100%; cursor: pointer; user-select: none; }
         .btn-add-wrapper { display: flex; justify-content: center; position: relative; }
-        .btn-add { 
-            width: 60px; height: 60px; background: #4f46e5; color: white; 
-            border-radius: 20px; display: flex; align-items: center; justify-content: center; 
-            position: absolute; top: -25px; box-shadow: 0 10px 25px -5px rgba(79, 70, 229, 0.5); 
-            transition: transform 0.1s; z-index: 50;
-        }
+        .btn-add { width: 60px; height: 60px; background: #4f46e5; color: white; border-radius: 20px; display: flex; align-items: center; justify-content: center; position: absolute; top: -25px; box-shadow: 0 10px 25px -5px rgba(79, 70, 229, 0.5); transition: transform 0.1s; z-index: 50; }
         .btn-add:active { transform: scale(0.92); }
-        
-        #signature-pad { border: 2px dashed #cbd5e1; border-radius: 16px; background: white; width: 100%; height: 180px; touch-action: none; cursor: crosshair; }
+        #signature-pad { background: transparent; width: 100%; height: 180px; touch-action: none; cursor: crosshair; position: relative; z-index: 10; }
         .qr-container { display: flex; justify-content: center; align-items: center; }
         .qr-container img { margin: 0 auto !important; border-radius: 8px; }
         .loading-overlay { position: fixed; inset: 0; background: rgba(255,255,255,0.95); z-index: 100; display: flex; flex-direction: column; align-items: center; justify-content: center; }
@@ -90,25 +49,22 @@
     </div>
 
     <div class="app-shell relative" id="app-shell">
-        <!-- HEADER ATAS -->
+        <!-- HEADER ATAS (DENGAN SECRET TAP) -->
         <header class="p-5 border-b border-slate-100 flex justify-between items-center bg-white/90 backdrop-blur-sm sticky top-0 z-20">
-            <div class="flex items-center gap-3">
-                <div class="bg-indigo-600 p-2.5 rounded-xl text-white shadow-lg shadow-indigo-100 flex items-center justify-center">
+            <!-- KLIK AREA INI 3X UNTUK LOGIN ADMIN -->
+            <div class="flex items-center gap-3 cursor-pointer select-none" onclick="secretAdminLogin()" title="Ketuk 3x untuk Admin">
+                <div class="bg-indigo-600 p-2.5 rounded-xl text-white shadow-lg shadow-indigo-100 flex items-center justify-center pointer-events-none">
                     <span class="material-icons">qr_code_scanner</span>
                 </div>
-                <div>
+                <div class="pointer-events-none">
                     <h1 class="font-extrabold text-lg md:text-xl leading-none text-slate-800">E-Tamu</h1>
                     <p class="text-[9px] text-indigo-500 font-black uppercase tracking-widest mt-0.5">SMK Queen Al-Falah</p>
                 </div>
             </div>
+
             <div class="flex items-center gap-2">
                 <div id="status-badge" class="px-3 py-1 bg-slate-100 text-[9px] font-black rounded-lg uppercase hidden sm:block shadow-sm">...</div>
                 
-                <!-- TOMBOL GEMBOK LOGIN ADMIN -->
-                <button onclick="toggleAdmin()" id="lock-btn" class="w-10 h-10 flex items-center justify-center bg-slate-50 hover:bg-slate-100 rounded-xl text-slate-600 transition shadow-sm border border-slate-100">
-                    <span class="material-icons text-xl pointer-events-none" id="lock-icon">lock</span>
-                </button>
-
                 <!-- Tombol Menu (Hanya terlihat jika Admin) -->
                 <button id="menu-btn" onclick="toggleMenu(event)" class="hidden w-10 h-10 flex items-center justify-center bg-indigo-50 hover:bg-indigo-100 rounded-xl text-indigo-600 transition shadow-sm border border-indigo-100">
                     <span class="material-icons text-xl pointer-events-none">widgets</span>
@@ -128,6 +84,9 @@
             <button onclick="fetchDataDariFirebase()" class="w-full flex items-center gap-3 p-3 text-xs font-bold text-indigo-500 hover:bg-indigo-50 rounded-xl transition">
                 <span class="material-icons">refresh</span> Refresh Data
             </button>
+            <button onclick="toggleAdmin()" class="w-full flex items-center gap-3 p-3 text-xs font-bold text-red-500 hover:bg-red-50 rounded-xl transition">
+                <span class="material-icons">logout</span> Keluar Admin
+            </button>
         </div>
 
         <!-- RUANG KONTEN UTAMA -->
@@ -135,22 +94,17 @@
             <!-- Disuntik oleh Router -->
         </main>
 
-        <!-- NAVIGASI BAWAH (STRUKTUR GRID BARU ANTI BUG DI HP/TABLET) -->
+        <!-- NAVIGASI BAWAH (Hanya Admin) -->
         <nav class="nav-bar hidden" id="main-nav">
-            <!-- Tombol Beranda -->
             <button onclick="router.navigate('dashboard')" id="nav-dashboard" class="nav-btn transition text-slate-400">
                 <span class="material-icons text-2xl pointer-events-none">space_dashboard</span>
                 <span class="text-[10px] font-black uppercase mt-1 pointer-events-none">Beranda</span>
             </button>
-            
-            <!-- Tombol Tengah (+) -->
             <div class="btn-add-wrapper">
                 <button onclick="router.navigate('form')" class="btn-add">
                     <span class="material-icons text-3xl pointer-events-none">add</span>
                 </button>
             </div>
-            
-            <!-- Tombol Riwayat -->
             <button onclick="router.navigate('history')" id="nav-history" class="nav-btn transition text-slate-400">
                 <span class="material-icons text-2xl pointer-events-none">history</span>
                 <span class="text-[10px] font-black uppercase mt-1 pointer-events-none">Riwayat</span>
@@ -180,15 +134,24 @@
         const dbFirestore = firebase.firestore();
 
         // =========================================================
-        // STATE & SISTEM LOGIN ADMIN
+        // FITUR 1: SISTEM LOGIN RAHASIA (3x TAP)
         // =========================================================
         const PIN_ADMIN = "123456";
-
-        let state = { 
-            view: 'form', 
-            guests: [],
-            isAdmin: sessionStorage.getItem('isAdmin') === 'true' 
-        };
+        let state = { view: 'form', guests: [], isAdmin: sessionStorage.getItem('isAdmin') === 'true' };
+        
+        let tapCount = 0;
+        let tapTimer = null;
+        function secretAdminLogin() {
+            if(state.isAdmin) return; // Jika sudah admin, abaikan
+            tapCount++;
+            clearTimeout(tapTimer);
+            tapTimer = setTimeout(() => { tapCount = 0; }, 1500); // Harus 3x klik dalam 1.5 detik
+            
+            if(tapCount >= 3) {
+                tapCount = 0;
+                toggleAdmin();
+            }
+        }
 
         function toggleAdmin() {
             if (state.isAdmin) {
@@ -196,10 +159,10 @@
                     state.isAdmin = false;
                     sessionStorage.removeItem('isAdmin');
                     router.navigate('form'); 
-                    showToast("Mode Tamu Aktif", "success");
+                    showToast("Kembali ke Mode Tamu", "success");
                 }
             } else {
-                const pin = prompt("Masukkan PIN Admin Sekolah:");
+                const pin = prompt("MENU RAHASIA\nMasukkan PIN Admin:");
                 if (pin === PIN_ADMIN) {
                     state.isAdmin = true;
                     sessionStorage.setItem('isAdmin', 'true');
@@ -212,6 +175,46 @@
             }
         }
 
+        // =========================================================
+        // FITUR 2: EFEK SUARA "TING" SAAT SUKSES
+        // =========================================================
+        function playSuccessSound() {
+            try {
+                // Membuat suara elektronik halus (anti file corrupt)
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = ctx.createOscillator();
+                const gainNode = ctx.createGain();
+                osc.type = 'sine'; // Suara bulat/halus
+                osc.frequency.setValueAtTime(880, ctx.currentTime); // Nada A5
+                gainNode.gain.setValueAtTime(0, ctx.currentTime);
+                gainNode.gain.linearRampToValueAtTime(0.3, ctx.currentTime + 0.1);
+                gainNode.gain.exponentialRampToValueAtTime(0.00001, ctx.currentTime + 1);
+                osc.connect(gainNode);
+                gainNode.connect(ctx.destination);
+                osc.start(ctx.currentTime);
+                osc.stop(ctx.currentTime + 1);
+            } catch (e) { console.log("Audio not supported"); }
+        }
+
+        // =========================================================
+        // FITUR 3: AUTO-KAPITAL & FITUR 4: QUICK CHIPS (Dipanggil di HTML Views)
+        // =========================================================
+        function formatTitleCase(inputElement) {
+            const text = inputElement.value;
+            inputElement.value = text.replace(/\w\S*/g, function(txt){
+                return txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase();
+            });
+        }
+
+        function setKeperluan(teks) {
+            const fpurpose = document.getElementById('fpurpose');
+            fpurpose.value = teks;
+            // Sedikit efek highlight agar tahu terpencet
+            fpurpose.classList.add('ring-2', 'ring-indigo-500');
+            setTimeout(()=> fpurpose.classList.remove('ring-2', 'ring-indigo-500'), 300);
+        }
+
+        // --- FETCH DATA ---
         async function fetchDataDariFirebase() {
             if (!state.isAdmin) return; 
             toggleLoader(true, "Mengunduh Data...");
@@ -220,23 +223,14 @@
                 const data = [];
                 snapshot.forEach(doc => { data.push({ id_firebase: doc.id, ...doc.data() }); });
                 state.guests = data;
-                
-                if (state.view === 'dashboard' || state.view === 'history') {
-                    router.render(); 
-                }
-            } catch (error) {
-                console.error(error); showToast("Gagal Terhubung Database", "error");
-            } finally {
-                toggleLoader(false);
-            }
+                if (state.view === 'dashboard' || state.view === 'history') router.render(); 
+            } catch (error) { showToast("Gagal Terhubung Database", "error"); } finally { toggleLoader(false); }
         }
 
         // --- SISTEM ROUTER ---
         const router = {
             navigate: (view, extra = null) => {
-                if (!state.isAdmin && view !== 'form' && view !== 'success') {
-                    view = 'form';
-                }
+                if (!state.isAdmin && view !== 'form' && view !== 'success') view = 'form';
                 window.location.hash = view; 
                 state.view = view;
                 router.render(extra);
@@ -245,15 +239,10 @@
             render: (extraData) => {
                 const content = document.getElementById('app-content');
                 
-                // UI Toggle Admin (Menggunakan Grid 'grid' bukan 'flex' lagi)
+                // UI Toggle Admin
                 document.getElementById('main-nav').style.display = state.isAdmin ? 'grid' : 'none';
                 document.getElementById('menu-btn').style.display = state.isAdmin ? 'flex' : 'none';
-                document.getElementById('lock-icon').innerText = state.isAdmin ? 'lock_open' : 'lock';
-                document.getElementById('lock-btn').className = state.isAdmin 
-                    ? 'w-10 h-10 flex items-center justify-center bg-red-50 hover:bg-red-100 rounded-xl text-red-500 transition border border-red-100' 
-                    : 'w-10 h-10 flex items-center justify-center bg-slate-50 hover:bg-slate-100 rounded-xl text-slate-600 transition border border-slate-100';
 
-                // WARNA NAVIGASI AKTIF
                 if(state.isAdmin) {
                     document.getElementById('nav-dashboard').className = `nav-btn transition ${state.view === 'dashboard' ? 'text-indigo-600' : 'text-slate-400'}`;
                     document.getElementById('nav-history').className = `nav-btn transition ${state.view === 'history' ? 'text-indigo-600' : 'text-slate-400'}`;
@@ -296,7 +285,6 @@
                 const tCount = state.guests.filter(g => g.date === today).length;
                 return `
                 <div class="fade-in space-y-6 md:space-y-8 max-w-4xl mx-auto">
-                    <!-- Top Stats Grid -->
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div class="bg-indigo-600 p-6 md:p-8 rounded-[2rem] text-white shadow-xl shadow-indigo-100 flex justify-between items-center md:col-span-2">
                             <div>
@@ -314,7 +302,6 @@
                         </div>
                     </div>
 
-                    <!-- Bottom Grid -->
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div class="bg-white border border-slate-100 p-6 md:p-8 rounded-[2rem] text-center shadow-sm h-full flex flex-col justify-center">
                             <h4 class="text-sm font-extrabold text-slate-800 mb-6 uppercase tracking-widest">QR PENDAFTARAN MANDIRI</h4>
@@ -343,7 +330,8 @@
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-5">
                             <div class="space-y-1">
                                 <label class="text-[10px] font-bold text-slate-500 uppercase ml-2">Nama Sesuai KTP *</label>
-                                <input type="text" id="fname" required class="w-full p-4 bg-white border border-slate-200 rounded-2xl text-sm font-semibold text-slate-800 focus:border-indigo-500 outline-none transition shadow-sm" placeholder="Contoh: Budi Santoso">
+                                <!-- Penambahan onblur untuk Auto-Kapital -->
+                                <input type="text" id="fname" required onblur="formatTitleCase(this)" class="w-full p-4 bg-white border border-slate-200 rounded-2xl text-sm font-semibold text-slate-800 focus:border-indigo-500 outline-none transition shadow-sm" placeholder="Contoh: Budi Santoso">
                             </div>
                             <div class="space-y-1">
                                 <label class="text-[10px] font-bold text-slate-500 uppercase ml-2">No. HP / WA (Opsional)</label>
@@ -353,12 +341,21 @@
                         
                         <div class="space-y-1">
                             <label class="text-[10px] font-bold text-slate-500 uppercase ml-2">Asal Instansi / Alamat *</label>
-                            <input type="text" id="fagency" required class="w-full p-4 bg-white border border-slate-200 rounded-2xl text-sm font-semibold text-slate-800 focus:border-indigo-500 outline-none transition shadow-sm" placeholder="Contoh: PT. Maju Mundur / Jl. Raya Kediri">
+                            <input type="text" id="fagency" required onblur="formatTitleCase(this)" class="w-full p-4 bg-white border border-slate-200 rounded-2xl text-sm font-semibold text-slate-800 focus:border-indigo-500 outline-none transition shadow-sm" placeholder="Contoh: PT. Maju Mundur / Jl. Raya Kediri">
                         </div>
 
                         <div class="space-y-1">
-                            <label class="text-[10px] font-bold text-slate-500 uppercase ml-2">Tujuan & Keperluan *</label>
-                            <textarea id="fpurpose" required class="w-full p-4 bg-white border border-slate-200 rounded-2xl text-sm font-semibold text-slate-800 focus:border-indigo-500 outline-none transition resize-none shadow-sm h-28" placeholder="Bertemu Bapak/Ibu... untuk keperluan..."></textarea>
+                            <label class="text-[10px] font-bold text-slate-500 uppercase ml-2 mb-1 block">Tujuan & Keperluan *</label>
+                            
+                            <!-- QUICK CHIPS (TOMBOL KEPERLUAN INSTAN) -->
+                            <div class="flex flex-wrap gap-2 mb-3">
+                                <button type="button" onclick="setKeperluan('Bertemu Kepala Sekolah')" class="px-3 py-1.5 bg-indigo-50 text-indigo-600 text-[10px] font-extrabold rounded-lg uppercase tracking-wider active:scale-95 transition border border-indigo-100 hover:bg-indigo-100">Kepala Sekolah</button>
+                                <button type="button" onclick="setKeperluan('Bertemu Tata Usaha (TU)')" class="px-3 py-1.5 bg-indigo-50 text-indigo-600 text-[10px] font-extrabold rounded-lg uppercase tracking-wider active:scale-95 transition border border-indigo-100 hover:bg-indigo-100">Tata Usaha</button>
+                                <button type="button" onclick="setKeperluan('Legalisir Ijazah / Dokumen')" class="px-3 py-1.5 bg-indigo-50 text-indigo-600 text-[10px] font-extrabold rounded-lg uppercase tracking-wider active:scale-95 transition border border-indigo-100 hover:bg-indigo-100">Legalisir</button>
+                                <button type="button" onclick="setKeperluan('Kunjungan Dinas / Kemitraan')" class="px-3 py-1.5 bg-indigo-50 text-indigo-600 text-[10px] font-extrabold rounded-lg uppercase tracking-wider active:scale-95 transition border border-indigo-100 hover:bg-indigo-100">Dinas</button>
+                            </div>
+
+                            <textarea id="fpurpose" required class="w-full p-4 bg-white border border-slate-200 rounded-2xl text-sm font-semibold text-slate-800 focus:border-indigo-500 outline-none transition resize-none shadow-sm h-24" placeholder="Ketik keperluan lain di sini..."></textarea>
                         </div>
                         
                         <div class="bg-amber-50 border border-amber-200 p-4 md:p-5 rounded-2xl flex gap-3 items-start shadow-sm">
@@ -369,12 +366,18 @@
                             </div>
                         </div>
 
-                        <div class="bg-white border border-slate-200 p-2 md:p-3 rounded-2xl shadow-sm">
-                            <div class="flex justify-between items-center p-2 mb-1">
-                                <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Tanda Tangan Digital *</span>
-                                <button type="button" onclick="clearSig()" class="text-[10px] font-black text-indigo-600 uppercase tracking-widest bg-indigo-50 px-3 py-1.5 rounded-lg active:scale-95 transition">Bersihkan</button>
+                        <!-- WATERMARK TANDA TANGAN -->
+                        <div class="bg-white border-2 border-dashed border-slate-300 rounded-2xl shadow-sm relative overflow-hidden">
+                            <div class="flex justify-between items-center p-2 absolute top-0 left-0 w-full z-20 pointer-events-none">
+                                <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest pl-2 pt-1">Tanda Tangan *</span>
+                                <button type="button" onclick="clearSig()" class="text-[9px] font-black text-indigo-600 uppercase tracking-widest bg-indigo-50 px-3 py-1.5 rounded-lg active:scale-95 transition pointer-events-auto mr-1 mt-1 border border-indigo-100">Ulangi</button>
                             </div>
-                            <canvas id="signature-pad" class="w-full"></canvas>
+                            
+                            <div id="sig-watermark" class="absolute inset-0 flex justify-center items-center pointer-events-none z-0">
+                                <span class="text-slate-200 font-extrabold text-lg opacity-60 select-none text-center">Goreskan Tanda Tangan<br>Di Sini</span>
+                            </div>
+
+                            <canvas id="signature-pad" class="w-full relative z-10"></canvas>
                         </div>
                         
                         <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 active:scale-95 transition-all text-white p-5 md:p-6 rounded-2xl font-extrabold shadow-xl shadow-indigo-200 tracking-widest text-sm uppercase mt-4">Kirim Pendaftaran</button>
@@ -426,7 +429,7 @@
                         </div>
                     </div>
                     
-                    ${state.isAdmin ? `<button onclick="router.navigate('dashboard')" class="w-full py-5 mt-4 text-slate-500 hover:text-indigo-600 transition font-black text-xs uppercase tracking-widest bg-white border border-slate-200 rounded-2xl shadow-sm">Selesai & Kembali</button>` : `<button onclick="router.navigate('form')" class="w-full py-5 mt-4 text-slate-500 hover:text-indigo-600 transition font-black text-xs uppercase tracking-widest bg-white border border-slate-200 rounded-2xl shadow-sm">Tutup & Daftar Baru</button>`}
+                    ${state.isAdmin ? `<button onclick="router.navigate('dashboard')" class="w-full py-5 mt-4 text-slate-500 hover:text-indigo-600 transition font-black text-xs uppercase tracking-widest bg-white border border-slate-200 rounded-2xl shadow-sm">Selesai & Kembali</button>` : `<button onclick="router.navigate('form')" class="w-full py-5 mt-4 text-white bg-slate-800 hover:bg-slate-900 transition font-black text-xs uppercase tracking-widest rounded-2xl shadow-lg">Selesai / Tamu Lain</button>`}
                 </div>`,
             
             history: () => `
@@ -507,7 +510,7 @@
             new QRCode(el, { text, width: size, height: size, colorDark: "#1e1b4b", colorLight: "#ffffff", correctLevel: QRCode.CorrectLevel.H });
         }
 
-        // --- SISTEM TANDA TANGAN (PERBAIKAN SKALA LAYAR) ---
+        // --- SISTEM TANDA TANGAN & WATERMARK ---
         let sigCanvas, sigCtx, drawing = false;
         function initSignature() {
             sigCanvas = document.getElementById('signature-pad');
@@ -518,7 +521,13 @@
             sigCanvas.width = rect.width;
             sigCanvas.height = rect.height;
             
+            // BACKGROUND PUTIH PENTING UNTUK EXPORT GAMBAR KE WORD!
+            sigCtx.fillStyle = "white";
+            sigCtx.fillRect(0, 0, sigCanvas.width, sigCanvas.height);
+            
             sigCtx.lineWidth = 3; sigCtx.lineCap = 'round'; sigCtx.lineJoin = 'round'; sigCtx.strokeStyle = '#4f46e5';
+
+            const watermark = document.getElementById('sig-watermark');
 
             const getPos = (e) => {
                 const r = sigCanvas.getBoundingClientRect();
@@ -529,14 +538,27 @@
                 return { x: (clientX - r.left) * scaleX, y: (clientY - r.top) * scaleY };
             };
             
-            const start = (e) => { e.preventDefault(); drawing = true; const p = getPos(e); sigCtx.beginPath(); sigCtx.moveTo(p.x, p.y); };
+            const start = (e) => { 
+                e.preventDefault(); 
+                drawing = true; 
+                if(watermark) watermark.style.display = 'none'; // Hilangkan tulisan watermark
+                const p = getPos(e); sigCtx.beginPath(); sigCtx.moveTo(p.x, p.y); 
+            };
             const move = (e) => { if(!drawing) return; e.preventDefault(); const p = getPos(e); sigCtx.lineTo(p.x, p.y); sigCtx.stroke(); };
             const stop = (e) => { if(drawing) { e.preventDefault(); drawing = false; }};
 
             sigCanvas.addEventListener('mousedown', start); sigCanvas.addEventListener('mousemove', move); sigCanvas.addEventListener('mouseup', stop); sigCanvas.addEventListener('mouseout', stop);
             sigCanvas.addEventListener('touchstart', start, {passive: false}); sigCanvas.addEventListener('touchmove', move, {passive: false}); sigCanvas.addEventListener('touchend', stop);
         }
-        function clearSig() { if(sigCtx) sigCtx.clearRect(0, 0, sigCanvas.width, sigCanvas.height); }
+        
+        function clearSig() { 
+            if(sigCtx) {
+                sigCtx.fillStyle = "white";
+                sigCtx.fillRect(0, 0, sigCanvas.width, sigCanvas.height);
+            }
+            const watermark = document.getElementById('sig-watermark');
+            if(watermark) watermark.style.display = 'flex'; // Munculkan watermark lagi
+        }
 
         window.addEventListener('resize', () => {
             if(state.view === 'form' && sigCanvas) {
@@ -544,6 +566,7 @@
                 const rect = sigCanvas.getBoundingClientRect();
                 sigCanvas.width = rect.width;
                 sigCanvas.height = rect.height;
+                sigCtx.fillStyle = "white"; sigCtx.fillRect(0, 0, sigCanvas.width, sigCanvas.height);
                 sigCtx.lineWidth = 3; sigCtx.lineCap = 'round'; sigCtx.lineJoin = 'round'; sigCtx.strokeStyle = '#4f46e5';
                 const img = new Image();
                 img.src = tempImage;
@@ -569,11 +592,24 @@
             });
         }
 
-        // --- FUNGSI KIRIM DATA KE FIREBASE ---
+        // --- FUNGSI KIRIM DATA ---
         async function handleSimpanKeFirebase(e) {
             e.preventDefault();
             const sigData = sigCanvas.toDataURL();
-            if (sigData.length < 2000) return showToast("Tanda tangan wajib diisi!", "error");
+            
+            // Pengecekan ketat apakah canvas ditandatangani
+            // Canvas putih berukuran 100% memakan size cukup besar, kita cek variansinya
+            const isCanvasBlank = () => {
+                const blank = document.createElement('canvas');
+                blank.width = sigCanvas.width;
+                blank.height = sigCanvas.height;
+                const blankCtx = blank.getContext('2d');
+                blankCtx.fillStyle = "white";
+                blankCtx.fillRect(0, 0, blank.width, blank.height);
+                return sigCanvas.toDataURL() === blank.toDataURL();
+            };
+
+            if (isCanvasBlank()) return showToast("Goreskan tanda tangan dulu!", "error");
             if (!navigator.onLine) return showToast("Gagal! Anda offline.", "error");
             
             toggleLoader(true, "Mengunggah Data...");
@@ -593,6 +629,10 @@
                 const docRef = await dbFirestore.collection("tamu").add(guest);
                 guest.id_firebase = docRef.id; 
                 if(state.isAdmin) { state.guests.unshift(guest); }
+                
+                // MEMAINKAN SUARA TING!
+                playSuccessSound();
+                
                 router.navigate('success', guest);
             } catch (error) { 
                 console.error(error); showToast("Gagal mendaftar", "error"); 
